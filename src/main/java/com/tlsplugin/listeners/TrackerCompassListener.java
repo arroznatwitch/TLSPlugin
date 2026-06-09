@@ -9,7 +9,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -21,7 +20,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.Team;
-import org.bukkit.util.Vector;
+
 import java.util.*;
 
 public class TrackerCompassListener implements Listener {
@@ -30,8 +29,8 @@ public class TrackerCompassListener implements Listener {
     private final Map<UUID, Long> cooldowns = new HashMap<>();
     private final Map<UUID, Integer> usos = new HashMap<>();
     private final Map<UUID, BukkitRunnable> activeTrackers = new HashMap<>();
+    private final Map<UUID, String> lastLoreState = new HashMap<>();
 
-    // CONFIG
     private final int cooldownSegundos;
     private final int maxUsos;
     private final boolean opInfinito;
@@ -39,8 +38,6 @@ public class TrackerCompassListener implements Listener {
     private List<String> baseLore;
 
     private static final String COMPASS_ID = "tls_plugin:tls_tracker_compass";
-
-    // Setas para direções (8 direções)
     private static final String[] ARROWS = {"↑", "↗", "→", "↘", "↓", "↙", "←", "↖"};
 
     public TrackerCompassListener(Tlsplugin plugin) {
@@ -78,8 +75,6 @@ public class TrackerCompassListener implements Listener {
         }
 
         ItemStack result = cs.getItemStack().clone();
-
-        // Aplica lore inicial do config
         if (baseLore != null && !baseLore.isEmpty()) {
             ItemUtils.applyLore(result, baseLore);
         }
@@ -106,7 +101,6 @@ public class TrackerCompassListener implements Listener {
         UUID id = p.getUniqueId();
         long now = System.currentTimeMillis();
 
-        // Cooldown
         if (!(opInfinito && p.isOp())) {
             long expira = cooldowns.getOrDefault(id, 0L);
             if (now < expira) {
@@ -116,7 +110,6 @@ public class TrackerCompassListener implements Listener {
             }
         }
 
-        // Usos
         if (!(opInfinito && p.isOp())) {
             int usados = usos.getOrDefault(id, 0);
             if (maxUsos > 0 && usados >= maxUsos) {
@@ -126,11 +119,9 @@ public class TrackerCompassListener implements Listener {
             usos.put(id, usados + 1);
         }
 
-        // Ativar rastreamento
         startTracking(p);
         p.sendMessage(msgUsar);
 
-        // Atualiza cooldown
         if (!(opInfinito && p.isOp())) {
             cooldowns.put(id, now + (cooldownSegundos * 1000L));
         }
@@ -140,8 +131,6 @@ public class TrackerCompassListener implements Listener {
     public void onItemChange(PlayerItemHeldEvent e) {
         Player p = e.getPlayer();
         ItemStack oldItem = p.getInventory().getItem(e.getPreviousSlot());
-
-        // Se saiu da bússola, para o rastreamento na action bar
         if (oldItem != null) {
             CustomStack custom = CustomStack.byItemStack(oldItem);
             if (custom != null && COMPASS_ID.equals(custom.getNamespacedID())) {
@@ -151,47 +140,37 @@ public class TrackerCompassListener implements Listener {
     }
 
     private void startTracking(Player p) {
-        stopTracking(p); // Para qualquer rastreamento anterior
+        stopTracking(p);
 
         BukkitRunnable task = new BukkitRunnable() {
             @Override
             public void run() {
-                // Verifica se ainda está segurando a bússola na mão principal
                 ItemStack hand = p.getInventory().getItemInMainHand();
                 CustomStack custom = CustomStack.byItemStack(hand);
-
                 if (custom == null || !COMPASS_ID.equals(custom.getNamespacedID())) {
                     stopTracking(p);
                     return;
                 }
 
-                // Encontra o alvo mais próximo
                 Player alvo = findNearestTarget(p);
-
                 if (alvo == null) {
                     p.spigot().sendMessage(ChatMessageType.ACTION_BAR,
                             new TextComponent(msgAlvoNaoEncontrado));
                     return;
                 }
 
-                // Calcula direção e distância
-                Location pLoc = p.getLocation();
-                Location aLoc = alvo.getLocation();
-
-                double distance = pLoc.distance(aLoc);
+                double distance = p.getLocation().distance(alvo.getLocation());
                 String arrow = getDirectionArrow(p, alvo);
-
-                // Envia ActionBar com seta e informação do config
-                String message = msgActionBar.replace("{alvo}", alvo.getName())
+                String message = msgActionBar
+                        .replace("{alvo}", alvo.getName())
                         .replace("{distancia}", String.valueOf((int) distance))
                         .replace("{seta}", arrow);
 
-                p.spigot().sendMessage(ChatMessageType.ACTION_BAR,
-                        new TextComponent(message));
+                p.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(message));
             }
         };
 
-        task.runTaskTimer(plugin, 0L, 5L); // Atualiza a cada 5 ticks (4x por segundo)
+        task.runTaskTimer(plugin, 0L, 5L);
         activeTrackers.put(p.getUniqueId(), task);
     }
 
@@ -204,33 +183,32 @@ public class TrackerCompassListener implements Listener {
                     long now = System.currentTimeMillis();
                     long expira = cooldowns.getOrDefault(id, 0L);
 
-                    String cooldownText;
-                    if (now < expira) {
-                        long restante = (expira - now) / 1000L;
-                        cooldownText = "§c" + restante + "s";
-                    } else {
-                        cooldownText = "§aPronto!";
-                    }
-
+                    String cooldownText = (now < expira)
+                            ? "§c" + ((expira - now) / 1000L) + "s"
+                            : "§aPronto!";
                     String usosText = String.valueOf(usos.getOrDefault(id, 0));
                     String maxUsosText = maxUsos > 0 ? String.valueOf(maxUsos) : "∞";
 
-                    // Percorre TODO o inventário, incluindo mão esquerda e cursor
-                    List<ItemStack> itemsToCheck = new ArrayList<>();
-                    itemsToCheck.addAll(Arrays.asList(p.getInventory().getContents()));
-                    itemsToCheck.add(p.getInventory().getItemInOffHand());
-                    itemsToCheck.add(p.getItemOnCursor());
+                    // Só atualiza a lore se o estado mudou
+                    String stateKey = cooldownText + "|" + usosText;
+                    if (!stateKey.equals(lastLoreState.get(id))) {
+                        lastLoreState.put(id, stateKey);
 
-                    for (ItemStack item : itemsToCheck) {
-                        if (item == null || item.getType() == Material.AIR) continue;
+                        List<ItemStack> itemsToCheck = new ArrayList<>();
+                        itemsToCheck.addAll(Arrays.asList(p.getInventory().getContents()));
+                        itemsToCheck.add(p.getInventory().getItemInOffHand());
+                        itemsToCheck.add(p.getItemOnCursor());
 
-                        CustomStack custom = CustomStack.byItemStack(item);
-                        if (custom != null && COMPASS_ID.equals(custom.getNamespacedID())) {
-                            ItemUtils.updateDynamicLore(item, baseLore, cooldownText, usosText, maxUsosText);
+                        for (ItemStack item : itemsToCheck) {
+                            if (item == null || item.getType() == Material.AIR) continue;
+                            CustomStack custom = CustomStack.byItemStack(item);
+                            if (custom != null && COMPASS_ID.equals(custom.getNamespacedID())) {
+                                ItemUtils.updateDynamicLore(item, baseLore, cooldownText, usosText, maxUsosText);
+                            }
                         }
                     }
 
-                    // Inicia a Action Bar apenas se ainda não estiver a rastrear
+                    // Tracking da action bar
                     ItemStack hand = p.getInventory().getItemInMainHand();
                     CustomStack handCustom = CustomStack.byItemStack(hand);
                     if (handCustom != null && COMPASS_ID.equals(handCustom.getNamespacedID())) {
@@ -238,7 +216,6 @@ public class TrackerCompassListener implements Listener {
                             startTracking(p);
                         }
                     } else {
-                        // Saiu da bússola — parar tracking se ainda estiver ativo
                         if (activeTrackers.containsKey(id)) {
                             stopTracking(p);
                         }
@@ -252,8 +229,7 @@ public class TrackerCompassListener implements Listener {
         BukkitRunnable task = activeTrackers.remove(p.getUniqueId());
         if (task != null) {
             task.cancel();
-            p.spigot().sendMessage(ChatMessageType.ACTION_BAR,
-                    new TextComponent(msgDesativado));
+            p.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(msgDesativado));
         }
     }
 
@@ -264,37 +240,18 @@ public class TrackerCompassListener implements Listener {
 
         for (Player other : Bukkit.getOnlinePlayers()) {
             if (other.equals(p)) continue;
-
-            // Ignora OP
             if (other.isOp()) continue;
-
-
-            // Ignora quem não está vivo/jogável
             switch (other.getGameMode()) {
-                case SURVIVAL:
-                case ADVENTURE:
-                    break;
-                default:
-                    continue; // CREATIVE ou SPECTATOR
+                case SURVIVAL: case ADVENTURE: break;
+                default: continue;
             }
-
-            // Ignora mesmo time
             Team teamO = other.getScoreboard().getEntryTeam(other.getName());
             if (teamP != null && teamP.equals(teamO)) continue;
-
             double d;
-            try {
-                d = p.getLocation().distance(other.getLocation());
-            } catch (IllegalArgumentException ex) {
-                continue;
-            }
-
-            if (d < melhor) {
-                melhor = d;
-                alvo = other;
-            }
+            try { d = p.getLocation().distance(other.getLocation()); }
+            catch (IllegalArgumentException ex) { continue; }
+            if (d < melhor) { melhor = d; alvo = other; }
         }
-
         return alvo;
     }
 
@@ -302,29 +259,20 @@ public class TrackerCompassListener implements Listener {
         Location pLoc = player.getLocation();
         Location tLoc = target.getLocation();
 
-        // Ângulo absoluto do player para o target (Norte = 0, sentido horário)
         double dx = tLoc.getX() - pLoc.getX();
         double dz = tLoc.getZ() - pLoc.getZ();
         double angleToTarget = Math.toDegrees(Math.atan2(dx, -dz));
         if (angleToTarget < 0) angleToTarget += 360;
 
-        // Yaw do Minecraft: 0=Sul, -90/270=Este, 90=Oeste, ±180=Norte
-        // Converter para mesmo sistema: Norte=0, sentido horário
         double playerFacing = (pLoc.getYaw() + 180) % 360;
-
-        // Ângulo relativo: 0=frente, 90=direita, 180=trás, 270=esquerda
         double relative = (angleToTarget - playerFacing + 360) % 360;
-
-        // 8 direções, cada sector de 45°
         int index = (int) Math.round(relative / 45.0) % 8;
         return ARROWS[index];
     }
 
-    // Limpar rastreamentos ao desabilitar plugin
     public void cleanup() {
-        for (BukkitRunnable task : activeTrackers.values()) {
-            task.cancel();
-        }
+        for (BukkitRunnable task : activeTrackers.values()) task.cancel();
         activeTrackers.clear();
+        lastLoreState.clear();
     }
 }
