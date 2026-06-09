@@ -39,6 +39,9 @@ public class MvPCommand implements CommandExecutor {
             int pos = 1;
             for (MVPStatsManager.PlayerStats stats : ranking) {
                 if (pos > 10) break;
+                // Ignorar OPs
+                org.bukkit.entity.Player online = org.bukkit.Bukkit.getPlayerExact(stats.playerName);
+                if (online != null && online.isOp()) continue;
                 String prefix  = pos <= 3 ? medals[pos - 1] : "§7 #" + pos;
                 int    pts     = stats.calculateTotalMVPPoints(pausedMs);
                 String ptColor = pts >= 0 ? "§a" : "§c";

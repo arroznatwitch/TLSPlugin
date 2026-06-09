@@ -22,7 +22,6 @@ import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
-
 import java.util.*;
 
 public class TrackerCompassListener implements Listener {
@@ -57,7 +56,7 @@ public class TrackerCompassListener implements Listener {
                 "§cA bússola está em cooldown! Espera {tempo}s.");
         this.msgLimite = plugin.getConfig().getString("compass_tracker.mensagem_limite",
                 "§cJá usaste a bússola o número máximo de vezes.");
-        
+
         reloadRecipe();
         startLoreUpdater();
     }
@@ -79,7 +78,7 @@ public class TrackerCompassListener implements Listener {
         }
 
         ItemStack result = cs.getItemStack().clone();
-        
+
         // Aplica lore inicial do config
         if (baseLore != null && !baseLore.isEmpty()) {
             ItemUtils.applyLore(result, baseLore);
@@ -224,19 +223,24 @@ public class TrackerCompassListener implements Listener {
 
                     for (ItemStack item : itemsToCheck) {
                         if (item == null || item.getType() == Material.AIR) continue;
-                        
+
                         CustomStack custom = CustomStack.byItemStack(item);
                         if (custom != null && COMPASS_ID.equals(custom.getNamespacedID())) {
                             ItemUtils.updateDynamicLore(item, baseLore, cooldownText, usosText, maxUsosText);
                         }
                     }
 
-                    // Inicia a Action Bar se tiver na mão principal
+                    // Inicia a Action Bar apenas se ainda não estiver a rastrear
                     ItemStack hand = p.getInventory().getItemInMainHand();
                     CustomStack handCustom = CustomStack.byItemStack(hand);
                     if (handCustom != null && COMPASS_ID.equals(handCustom.getNamespacedID())) {
                         if (!activeTrackers.containsKey(id)) {
                             startTracking(p);
+                        }
+                    } else {
+                        // Saiu da bússola — parar tracking se ainda estiver ativo
+                        if (activeTrackers.containsKey(id)) {
+                            stopTracking(p);
                         }
                     }
                 }
@@ -298,25 +302,21 @@ public class TrackerCompassListener implements Listener {
         Location pLoc = player.getLocation();
         Location tLoc = target.getLocation();
 
-        // Vetor da direção do player
-        Vector playerDir = pLoc.getDirection().setY(0).normalize();
+        // Ângulo absoluto do player para o target (Norte = 0, sentido horário)
+        double dx = tLoc.getX() - pLoc.getX();
+        double dz = tLoc.getZ() - pLoc.getZ();
+        double angleToTarget = Math.toDegrees(Math.atan2(dx, -dz));
+        if (angleToTarget < 0) angleToTarget += 360;
 
-        // Vetor do player para o target
-        Vector toTarget = tLoc.toVector().subtract(pLoc.toVector()).setY(0).normalize();
+        // Yaw do Minecraft: 0=Sul, -90/270=Este, 90=Oeste, ±180=Norte
+        // Converter para mesmo sistema: Norte=0, sentido horário
+        double playerFacing = (pLoc.getYaw() + 180) % 360;
 
-        // Calcula o ângulo entre os vetores
-        double dot = playerDir.dot(toTarget);
-        double angle = Math.toDegrees(Math.acos(dot));
+        // Ângulo relativo: 0=frente, 90=direita, 180=trás, 270=esquerda
+        double relative = (angleToTarget - playerFacing + 360) % 360;
 
-        // Determina se é esquerda ou direita usando cross product
-        Vector cross = playerDir.getCrossProduct(toTarget);
-        if (cross.getY() < 0) {
-            angle = 360 - angle;
-        }
-
-        // Converte para índice de seta (8 direções)
-        int index = (int) Math.round(angle / 45.0) % 8;
-
+        // 8 direções, cada sector de 45°
+        int index = (int) Math.round(relative / 45.0) % 8;
         return ARROWS[index];
     }
 

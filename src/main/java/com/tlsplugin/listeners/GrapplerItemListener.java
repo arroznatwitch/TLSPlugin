@@ -29,6 +29,7 @@ public class GrapplerItemListener implements Listener {
     private final Map<UUID, Long>    cooldowns   = new HashMap<>();
     private final Map<UUID, Integer> usos        = new HashMap<>();
     private final Map<UUID, Boolean> noFallDamage = new HashMap<>();
+    private final Map<UUID, String>  lastLoreState = new HashMap<>();
 
     private final int     cooldownSegundos;
     private final int     maxUsos;
@@ -202,16 +203,22 @@ public class GrapplerItemListener implements Listener {
                     String usosText    = String.valueOf(usos.getOrDefault(id, 0));
                     String maxUsosText = maxUsos > 0 ? String.valueOf(maxUsos) : "∞";
 
-                    List<ItemStack> itemsToCheck = new ArrayList<>();
-                    itemsToCheck.addAll(Arrays.asList(p.getInventory().getContents()));
-                    itemsToCheck.add(p.getInventory().getItemInOffHand());
-                    itemsToCheck.add(p.getItemOnCursor());
+                    // Só atualiza a lore se o estado mudou desde a última vez
+                    String stateKey = cooldownText + "|" + usosText;
+                    if (!stateKey.equals(lastLoreState.get(id))) {
+                        lastLoreState.put(id, stateKey);
 
-                    for (ItemStack item : itemsToCheck) {
-                        if (item == null || item.getType() == Material.AIR) continue;
-                        CustomStack custom = CustomStack.byItemStack(item);
-                        if (custom != null && GRAPPLER_ID.equals(custom.getNamespacedID())) {
-                            ItemUtils.updateDynamicLore(item, baseLore, cooldownText, usosText, maxUsosText);
+                        List<ItemStack> itemsToCheck = new ArrayList<>();
+                        itemsToCheck.addAll(Arrays.asList(p.getInventory().getContents()));
+                        itemsToCheck.add(p.getInventory().getItemInOffHand());
+                        itemsToCheck.add(p.getItemOnCursor());
+
+                        for (ItemStack item : itemsToCheck) {
+                            if (item == null || item.getType() == Material.AIR) continue;
+                            CustomStack custom = CustomStack.byItemStack(item);
+                            if (custom != null && GRAPPLER_ID.equals(custom.getNamespacedID())) {
+                                ItemUtils.updateDynamicLore(item, baseLore, cooldownText, usosText, maxUsosText);
+                            }
                         }
                     }
 
@@ -223,7 +230,7 @@ public class GrapplerItemListener implements Listener {
                             int cheios = (int) Math.round(20.0 * (expira - now) / (cooldownSegundos * 1000.0));
                             int vazios  = 20 - cheios;
                             String barra = "§e" + "█".repeat(Math.max(0, cheios))
-                                         + "§8" + "░".repeat(Math.max(0, vazios));
+                                    + "§8" + "░".repeat(Math.max(0, vazios));
                             p.spigot().sendMessage(ChatMessageType.ACTION_BAR,
                                     new TextComponent("§6⚓ Grappler §r" + barra + " §7" + restante + "s"));
                         }
@@ -237,5 +244,6 @@ public class GrapplerItemListener implements Listener {
         noFallDamage.clear();
         cooldowns.clear();
         usos.clear();
+        lastLoreState.clear();
     }
 }
