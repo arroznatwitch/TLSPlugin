@@ -1,0 +1,70 @@
+plugins {
+    id 'java'
+    id("xyz.jpenilla.run-paper") version "2.3.1"
+}
+
+// Versões configuráveis via -P (ex: -PpaperApiVersion=1.21.11-R0.1-SNAPSHOT -PrunMinecraftVersion=1.21.11)
+def paperApiVersion = project.hasProperty('paperApiVersion') ? project.getProperty('paperApiVersion') : '1.21.10-R0.1-SNAPSHOT'
+def runMinecraftVersion = project.hasProperty('runMinecraftVersion') ? project.getProperty('runMinecraftVersion') : '26.1.2'
+
+group = 'com'
+version = '3.11.4'
+
+repositories {
+    // Repositórios principais
+    mavenCentral()
+    maven { url "https://repo.papermc.io/repository/maven-public/" }
+    maven { url "https://jitpack.io" }
+
+    // Mantemos o repositório do ItemsAdder (caso atualizem no futuro)
+    maven {
+        name = "matteodev"
+        url = "https://maven.devs.beer/"
+    }
+}
+
+dependencies {
+    // API principal do Paper (versão configurável)
+    compileOnly("io.papermc.paper:paper-api:${paperApiVersion}")
+
+    // ItemsAdder API — versão 4.0.14 via JAR local
+    // ➜ Coloque o arquivo `api-itemsadder-4.0.14.jar` dentro da pasta `libs/`
+    compileOnly files("libs/api-itemsadder-4.0.14.jar")
+
+    // ProtocolLib local
+    compileOnly files("libs/ProtocolLib.jar")
+}
+
+tasks {
+    runServer {
+        // Versão do servidor usada pelo task runServer (configurável)
+        minecraftVersion(runMinecraftVersion)
+    }
+}
+
+// Mantemos target Java compatível (21 é seguro para a maioria dos ambientes atuais)
+def targetJavaVersion = 21
+java {
+    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
+    if (JavaVersion.current() < javaVersion) {
+        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
+        options.release.set(targetJavaVersion)
+    }
+}
+
+processResources {
+    def props = [version: version]
+    inputs.properties props
+    filteringCharset 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand props
+    }
+}

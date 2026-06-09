@@ -1,0 +1,392 @@
+# TLSPlugin - configuração em PT-PT
+bordas:
+  - 10000.0
+  - 9500.0
+  - 8000.0
+  - 6500.0
+  - 5000.0
+  - 3750.0
+  - 2500.0
+  - 1000.0
+  - 500.0
+  - 50.0
+
+
+# tempo de cada encolhimento em segundos (12 minutos = 720s)
+tempo_shrink_segundos: 30
+# pausa entre fases em segundos (30s)
+tempo_pausa_segundos: 15
+
+# Mensagens no chat (PT-PT). Usa {stage}, {total}, {coord}, {time} como placeholders.
+mensagens:
+  borda_inicio: "§f[§bTLS§f] A borda {stage}/{total} começou — a encolher para {coord} em {time}."
+  borda_pausada: "§f[§bTLS§f] A borda {stage}/{total} foi §cPAUSADA§f — retoma em {time}."
+  borda_retomada: "§f[§bTLS§f] A borda {stage}/{total} foi retomada — a encolher para {coord} em {time}."
+  borda_terminou: "§f[§bTLS§f] A borda {stage}/{total} terminou — próxima: {coord}."
+  pvp_heal: "§f[§bTLS§f] §a§l{player} §aganhou §a§l{value}❤ §ade vida."
+  pvp_dmg: "§f[§bTLS§f] §c§l{player} §cperdeu §c§l{value}❤ §cde vida."
+  assist_recebido: "§e[ASSIST] Recebeste um assist na morte de {victim}!"
+  kill_assist_sufixo: " §7(Assist: {assistants})"
+  kill_ganhou: "§f[§bTLS§f] §f§l{killer} §ematou §f§l{victim} §ee ganhou §a+§l{value}❤ §ee uma cabeça ⭐."
+
+# BossBar text template (pode usar os mesmos placeholders)
+bossbar_template: "§e⏳ Borda §f{stage}/{total} — §eFecha até §f§l{coord} §eem §f§l{time}"
+
+# Formato de arredondamento: numero de casas decimais ao mostrar alteração de vida
+pvp_decimais: 1
+
+# Valores para dar ao matar
+heal_on_kill: 4.0
+
+grappler_item:
+
+  # Se o sistema está ativo
+  habilitar: true
+
+  # Cooldown em segundos entre usos
+  cooldown_segundos: 90
+
+  # Número máximo de usos por jogador por jogo
+  # Coloca 0 para usos ilimitados
+  max_usos: 3
+
+  # Se true, OPs têm cooldown e usos infinitos
+  op_infinito: true
+
+  # Range máximo do grappling hook (em blocos)
+  range_blocos: 15
+
+  # Mensagens (suporta códigos de cor &/§)
+  mensagem_usar: "§f[§bTLS§f] §aGrappler lançado!"
+  mensagem_cooldown: "§f[§bTLS§f] §cO Grappler está em cooldown! Espera {tempo}s."
+  mensagem_limite: "§f[§bTLS§f] §cJá usaste o Grappler o número máximo de vezes ({max})."
+  mensagem_fora_range: "§f[§bTLS§f] §cNenhum bloco dentro do alcance ({range} blocos)!"
+  mensagem_quebrou: "§f[§bTLS§f] §c§l[!] §cO teu Grappler quebrou!"
+
+  # Configuração de Lore
+  lore:
+    - "§7Um gancho especial para te"
+    - "§7puxar para blocos distantes."
+    - ""
+    - "§eCooldown: §f{cooldown}"
+    - "§eUsos: §f{usos}/{max_usos}"
+
+# Receita: true para habilitar a receita de crafting da maçã especial
+habilitar_receita_maça: true
+
+# Valores de cor para o TAB (limiares em percentagem)
+tab:
+  verde: 0.66
+  amarelo: 0.33
+
+# --- Configurações de Revive e Kits Médicos ---
+revive:
+  # Desativa completamente o sistema de revives se falso
+  habilitar: false
+
+  # O jogador morto é forçado para SPECTATOR (Modo Espectador)
+  forcamorte_spectator: true
+
+  # O corpo (ArmorStand) deve ser criado para ser revivido
+  habilitar_corpo_revive: false
+
+  # Resistência que o jogador ganha ao ser revivido com sucesso
+  efeito_resistencia:
+    habilitar: true
+    duracao_segundos: 15
+    nivel: 1
+
+  # Quantidade de vida que o jogador ganha ao ser revivido
+  vida_revive:
+    kit_completo_percentagem: 1.0
+    kit_parcial_percentagem: 0.5
+
+  # Tempo limite para reviver um jogador
+  tempo_limite_revive_segundos: 300
+
+# --- Configurações do Jogo ---
+game:
+  # Gamerules que serão forçadas ao iniciar o jogo
+  gamerules:
+    announceAdvancements: false
+    showDeathMessages: false
+    doImmediateRespawn: true
+    locator_bar: false
+
+
+
+  # Outras opções
+  modo-desenvolvedor: true
+
+  # Item do Livro de Receitas (ItemsAdder ID) — entregue ao início do jogo
+  craft_book_item: "tls_plugin:craft_book"
+
+# Janela de tempo (segundos) para contar assist após dar dano
+assist_janela_segundos: 10
+
+# --- Mensagens Gerais de Comandos ---
+mensagens_comandos:
+  prefixo: "§f[§bTLS§f] "
+  sem_permissao: "§f[§bTLS§f] §cNão tens permissão para executar este comando."
+  erro_jogador_nao_encontrado: "§f[§bTLS§f] §cJogador {player} não encontrado."
+  reloadead: "§f[§bTLS§f] §aConfiguração recarregada com sucesso!"
+  crash_aviso: "§c[TLS] ⚠ O servidor caiu inesperadamente. O jogo foi §lPAUSADO§r§c. Use §f/unpause §cpara retomar."
+  jogo_iniciado: "§f[§bTLS§f] §aO jogo começou e as regras foram aplicadas."
+  endgame_palavra_confirmar: "confirmar"
+  endgame_confirmar: "§c⚠ Tens a certeza? Escreve §f/endgame confirmar §cpara terminar o jogo."
+  jogo_terminado: "§f[§bTLS§f] §cO jogo foi terminado pelo administrador!"
+  jogo_confirmar_start: "§f[§bTLS§f] §eTens a certeza que queres começar o jogo? Digita §f/startgame confirmar §epara prosseguir."
+  jogo_pausado: "§f[§bTLS§f] §c⏸ Jogo pausado."
+  jogo_ja_pausado: "§f[§bTLS§f] §cO jogo já se encontra pausado."
+  jogo_nao_pausado: "§f[§bTLS§f] §cO jogo não está pausado."
+  jogo_retomando: "§f[§bTLS§f] §aRetomando o jogo em instantes..."
+  borda_setada: "§f[§bTLS§f] §eBorda inicial configurada com sucesso."
+  mvp_sem_dados: "§f[§bTLS§f] §eAinda não existem dados de MVP."
+
+# --- Pausa por Jogador (/pedirpausa / /aceitarpausa) ---
+pausa_jogador:
+  # Duração da pausa em segundos (padrão: 120 = 2 minutos)
+  duracao_segundos: 120
+  # Número máximo de pausas que cada jogador pode usar por jogo
+  max_pausas_por_jogador: 2
+  # Motivo padrão caso o jogador não indique nenhum
+  motivo_padrao: "Sem motivo indicado."
+  mensagens:
+    # Confirmação enviada ao jogador que pediu a pausa
+    pedido_enviado: "§f[§bTLS§f] §aPedido de pausa enviado aos operadores."
+    # Notificações enviadas aos OPs
+    notificacao_op_separador: "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+    notificacao_op_linha1: "§fO jogador §e\"{player}\"§f está a pedir pausa!"
+    notificacao_op_linha2: "§eMotivo: §f{motivo}"
+    notificacao_op_linha3: "§7» Usa §f/aceitarpausa {player} §7para aceitar."
+    # Mensagem global quando a pausa é aceite
+    pausa_aceite_global: "§f[§bTLS§f] O jogador \"§e{player}§f\" pausou o jogo e voltamos nuns instantes..."
+    # Erros
+    sem_pausas_restantes: "§f[§bTLS§f] §cJá não tens pausas disponíveis! (Máx: {max})"
+    pedido_ja_pendente: "§f[§bTLS§f] §cJá tens um pedido de pausa pendente."
+    sem_pedido_pendente: "§f[§bTLS§f] §cNão existe nenhum pedido de pausa pendente de {player}."
+    jogo_nao_iniciado: "§f[§bTLS§f] §cO jogo ainda não começou."
+
+# --- Configuração Visual do MVP ---
+mvp_design:
+  titulo_ranking: "§b§l★ RANKING MVP ★"
+  rodape_ranking: "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+  sub_titulo_detalhes: "§b§l★ MVP — {player} ★"
+  linha_divisor: "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+  pontuacao_total: "§e✦ Pontuação Total: {color}§l{pts} pts"
+  secao_combate: "§f⚔ §lCombate"
+  secao_dano: "§f🗡 §lDano"
+  secao_tempo: "§f⏱ §lTempo & Revivals"
+  formato_kills: "  §7Kills:   §a{val} §8(+{pts} pts)"
+  formato_assists: "  §7Assists: §a{val} §8(+{pts} pts)"
+  formato_mortes: "  §7Mortes:  §c{val} §8({pts} pts)"
+  formato_dado: "  §7Dado (DDJ):       §a{val}"
+  formato_recebido: "  §7Recebido (DRJ):   §c{val}"
+  formato_diferenca: "  §7Diferença (DDRD): {color}{val} §8({pts} pts)"
+  formato_tempo: "  §7Tempo Vivo: §b{val} min §8(+{pts} pts)"
+  formato_revivals: "  §7Reviveu:    §a{val} pessoa(s) §8(+{pts} pts)"
+  comando_sobre: "§7» Use §f/sobremvp <nick>§7 para detalhes."
+
+# --- Configuração de Pontuação MVP ---
+mvp_pontos:
+  kill: 8
+  assist: 3
+  morte: -6
+  revive: 5
+  tempo_vivo:
+    pontos: 2
+    cada_minutos: 5
+  ddrd:
+    excelente_limiar: 21
+    excelente_pontos: 6
+    bom_limiar: 11
+    bom_pontos: 4
+    positivo_limiar: 1
+    positivo_pontos: 2
+    negativo_limiar: -10
+    negativo_pontos: -3
+
+# --- Configuração da Holograma de Morte ---
+holograma:
+  linha_1: "§6💀 {jogador} §c[Revivível]"
+  linha_2: "§7Tempo restante: §e{minutos}m {segundos}s"
+
+# --- Mensagens de Revive ---
+mensagens_revive:
+  # Se deve anunciar no chat global quando alguém morre
+  anunciar_morte_chat: true
+
+  # --- Bússola Rastreadora (Action Bar) ---
+  compass_action_bar: "§fAlvo: §b{alvo} §7| §fDistância: §b{distancia}m §7| {seta}"
+  compass_alvo_nao_encontrado: "§c✖ Nenhum alvo encontrado"
+
+  # --- Mensagens de morte ---
+  morte_anuncio_chat: "§f[§bTLS§f] §c💀 §f§l{player} §efoi morto! O seu corpo em §f§l{bloco_marcador} §edeve ser reanimado em §f§l{tempo_limite}."
+  morte_anuncio_title: "§f[§bTLS§f] §c§l💀 MORTE"
+  morte_anuncio_subtitle: "§7Aguarde reanimação!"
+
+  # --- Sucesso ---
+  revive_sucesso_healer: "§f[§bTLS§f] §e💊 Reviveste §f§l{target} §ecom sucesso!"
+  revive_sucesso_alvo: "§f[§bTLS§f] §eFoste revivido por §f§l{healer} §ee ganhaste Resistência 🛡️"
+
+  # --- Falha / Expirou ---
+  revive_expirou_alvo: "§f[§bTLS§f] §cO tempo para te reanimar expirou! Agora és um espectador permanente."
+  revive_erro_sem_kit: "§f[§bTLS§f] §cPrecisas de um Kit Médico para reanimar este corpo."
+  revive_erro_nao_equipa: "§f[§bTLS§f] §cSó podes reanimar jogadores da tua equipe."
+  revive_erro_sem_permissao: "§f[§bTLS§f] §cNão tens permissão para usar o Kit Médico."
+  revive_erro_alvo_invalido: "§f[§bTLS§f] §cEste alvo não pode ser reanimado."
+
+  # --- Proteção extra ---
+  bloco_indestrutilvel: "§f[§bTLS§f] §cNão podes destruir o marcador do corpo."
+
+
+# --- Configuração da Bússola Rastreadora ---
+compass_tracker:
+  habilitar: true         # ativa/desativa o sistema
+  cooldown_segundos: 180  # tempo de recarga entre usos (3 minutos)
+  max_usos: 3             # número máximo de usos (0 = infinito)
+  op_infinito: true       # OP pode usar infinitamente (bom pra testes)
+  mensagem_usar: "§f[§bTLS§f] §eA bússola aponta agora para §f§l{alvo}§e!"
+  mensagem_cooldown: "§f[§bTLS§f] §cA bússola está em cooldown! Espera {tempo}s."
+  mensagem_limite: "§f[§bTLS§f] §cJá usaste a bússola o número máximo de vezes."
+  # --- Configuração de Lore ---
+  lore:
+    - "§7Uma bússola especial para"
+    - "§7rastrear jogadores próximos."
+    - ""
+    - "§eCooldown: §f{cooldown}"
+    - "§eUsos: §f{usos}/{max_usos}"
+
+  # Mensagens de rastreamento
+  mensagem_alvo_nao_encontrado: "§c✖ Nenhum alvo encontrado"
+  mensagem_action_bar: "§fAlvo: §b{alvo} §7| §fDistância: §b{distancia}m §7| {seta}"
+  mensagem_rastreamento_desativado: "§7Rastreamento desativado"
+
+# --- Configuração dos Itens Médicos e Maçã ---
+med_items:
+  special_apple:
+    mensagem_consumo: "§f[§bTLS§f] §6✨ Consumiste a Maçã Dourada Especial!"
+    # Efeitos da Maçã Dourada especial (quando comida) - tempo em segundos e amplitude (level)
+    # API do Bukkit usa 0 para Nível I, 1 para Nível II, etc.
+    efeitos:
+      regeneracao:
+        duracao_segundos: 10
+        nivel: 1
+      absorcao:
+        duracao_segundos: 90
+        nivel: 1
+      resistencia_fogo:
+        duracao_segundos: 15
+        nivel: 0
+      forca:
+        duracao_segundos: 5
+        nivel: 0
+    lore:
+      - "§7Uma maçã imbuída de poder."
+      - ""
+      - "§eEfeitos ao comer:"
+      - "§f- Regeneração II (10s)"
+      - "§f- Absorção II (1:30)"
+      - "§f- Resistência ao Fogo I (15s)"
+      - "§f- Força I (5s)"
+
+  kit_parcial:
+    lore:
+      - "§eClique Direito + Shift §7na Pedra"
+      - "§7Luminosa para reanimar o teu"
+      - "§7companheiro que morreu."
+      - "§7(Recupera 50% da vida)"
+
+  kit_completo:
+    lore:
+      - "§eClique Direito + Shift §7na Pedra"
+      - "§7Luminosa para reanimar o teu"
+      - "§7companheiro que morreu."
+      - "§7(Recupera 100% da vida)"
+
+# --- Configuração do Gold Potion ---
+gold_potion:
+  item_id: "tls_plugin:goldpotion_item"
+  # Mensagens
+  mensagem_usar: "§aBebeste a poção dourada e recebeste um efeito aleatório!"
+
+  # Lore do item base
+  lore:
+    - "§7Uma poção misteriosa que concede"
+    - "§7um efeito aleatório ao ser consumida."
+    - ""
+    - "§eClique direito para usar!"
+
+  # Probabilidades de nível (em percentagem)
+  # Nivel II deve ter menor probabilidade que nível I
+  chances_nivel:
+    nivel_1: 70
+    nivel_2: 30
+
+  # Duração das poções (segundos)
+  duracao:
+    nivel_1: 90
+    nivel_2: 60
+
+  # Lista de poções possíveis
+  efeitos:
+    - INSTANT_HEALTH
+    - REGENERATION
+    - STRENGTH
+    - SPEED
+    - FIRE_RESISTANCE
+    - JUMP_BOOST
+
+# --- Configuração do Scoreboard (Sidebar) ---
+scoreboard:
+  # Título da sidebar
+  titulo: "§b§lTLS - III"
+
+  # Etiquetas das secções (texto que aparece como cabeçalho de cada bloco)
+  label_fase: "§8Fase: "
+  label_tempo: "§8Tempo: "
+  label_localizacao: "§bLocalização:"
+  label_x: "§8 X: "
+  label_z: "§8 Z: "
+  label_borda: "§bBorda:"
+  label_borda_xz: "§8 X/Z: "
+  label_borda_dist: "§8 Dist: "
+  label_equipa: "§bEquipa:"
+
+  # Cor dos valores principais (fase, tempo, coordenadas, tamanho da borda)
+  cor_valor: "§b"
+
+  # Cor do indicador de distância da borda (dinâmica - muda conforme a distância)
+  # Quando dist <= limiar_perigo  → cor_perigo
+  # Quando dist <= limiar_aviso   → cor_aviso
+  # Caso contrário                → cor_seguro
+  limiar_perigo: 100
+  limiar_aviso: 250
+  cor_perigo: "§c"
+  cor_aviso: "§e"
+  cor_seguro: "§a"
+
+  # Formato das linhas de jogadores na secção da equipa
+  # {cor_status} = cor do diamond (§c se morto, §b se vivo)
+  # {nome}       = nome do jogador
+  # {vida}       = vida atual (omitido se morto)
+  linha_jogador_vivo: "§b⬢ §7{nome}§8 - §c❤ {vida}"
+  linha_jogador_morto: "§c§l⬢ §7{nome} - MORTO"
+
+craft_book:
+  special_items:
+    tls_special_apple:
+      habilitar: true
+      habilitar_receita: true
+    goldpotion_item:
+      habilitar: true
+      habilitar_receita: true
+    grappler_item:
+      habilitar: true
+      habilitar_receita: true
+    kit_completo:
+      habilitar: false
+      habilitar_receita: false
+    kit_parcial:
+      habilitar: false
+      habilitar_receita: false
