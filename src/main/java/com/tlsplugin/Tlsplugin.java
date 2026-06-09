@@ -37,6 +37,7 @@ public class Tlsplugin extends JavaPlugin {
     private GameFreezeManager        freezeManager;
     private MVPStatsManager          mvpStatsManager;
     private PlayerPauseManager       pauseManager;
+    private ProntoCommand            prontoCommand;
 
     @Override
     public void onEnable() {
@@ -56,6 +57,7 @@ public class Tlsplugin extends JavaPlugin {
         this.mvpStatsManager        = new MVPStatsManager();
         this.mvpStatsManager.loadStats();
         this.pauseManager           = new PlayerPauseManager();
+        this.prontoCommand          = new ProntoCommand(this);
 
         // ==== REGISTER MANAGERS AS LISTENERS ====
         Bukkit.getPluginManager().registerEvents(borderManager, this);
@@ -102,6 +104,7 @@ public class Tlsplugin extends JavaPlugin {
             public void onQuit(PlayerQuitEvent e) {
                 borderScoreboardManager.remove(e.getPlayer());
                 mvpStatsManager.unregisterPlayer(e.getPlayer().getName());
+                prontoCommand.remover(e.getPlayer().getUniqueId());
             }
         }, this);
 
@@ -136,6 +139,8 @@ public class Tlsplugin extends JavaPlugin {
             if (sender instanceof Player p) CraftBookGui.openMain(p);
             return true;
         });
+        getCommand("pronto").setExecutor(prontoCommand);
+        getCommand("anunciar").setExecutor(new AnunciarCommand(this));
 
         // ==== RECIPES ====
         if (Bukkit.getPluginManager().isPluginEnabled("ItemsAdder")) {
@@ -181,4 +186,5 @@ public class Tlsplugin extends JavaPlugin {
     public GameFreezeManager getFreezeManager()        { return freezeManager; }
     public MVPStatsManager getMVPStatsManager()        { return mvpStatsManager; }
     public PlayerPauseManager getPauseManager()        { return pauseManager; }
+    public ProntoCommand getProntoCommand()            { return prontoCommand; }
 }

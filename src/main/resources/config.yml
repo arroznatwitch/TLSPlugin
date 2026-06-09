@@ -406,3 +406,19 @@ craft_book:
     kit_parcial:
       habilitar: false
       habilitar_receita: false
+# --- Comando /pronto ---
+pronto:
+  prefixo: "§f[§bTLS§f] "
+  mensagem_pronto: "§f[§bTLS§f] §aEstás agora marcado como pronto!"
+  mensagem_nao_pronto: "§f[§bTLS§f] §cJá não estás marcado como pronto."
+  cabecalho: "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+  rodape: "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+  titulo: "§b§lLista de Jogadores"
+  linha_pronto: "§a[ PRONTO ] §f{nome}"
+  linha_nao_pronto: "§c[ NÃO ESTÁ PRONTO ] §f{nome}"
+  mensagem_todos_prontos: "§f[§bTLS§f] §a§lTodos os jogadores estão prontos! O jogo pode começar."
+
+# --- Comando /anunciar ---
+anunciar:
+  separador: "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+  prefixo: "§b§l[TLS ANÚNCIO] §f§l"

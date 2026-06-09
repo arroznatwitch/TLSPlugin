@@ -1,5 +1,5 @@
 name: tlsplugin
-version: "3.11.4"
+version: "3.11.6"
 main: com.tlsplugin.Tlsplugin
 api-version: "1.21"
 author: "ArrozNaTwitch"
@@ -8,15 +8,15 @@ commands:
   setborda:
     description: "Define a borda inicial para o valor configurado (ex: 10000)."
     usage: /setborda
-    permission: tlsplugin.setborda
+    permission: tls.admin
   startgame:
     description: "Inicia o ciclo de bordas (start game)."
     usage: /startgame
-    permission: tlsplugin.startgame
+    permission: tls.admin
   teamjoin:
     description: Junta-se a uma equipe e dá o grupo correspondente.
     usage: /<command> <team> [player]
-    permission: tlsplugin.teamjoin
+    permission: tls.admin
   tlsreload:
     description: Recarrega o config
     permission: tls.admin
@@ -47,13 +47,13 @@ commands:
     description: Mostra as estatísticas detalhadas de um jogador
     usage: /sobremvp <nick>
     permission: tls.admin
-  permissions:
-    tlsplugin.setborda:
-      default: op
-    tlsplugin.startgame:
-      default: op
-    tlsplugin.teamjoin:
-      default: op
   craftbook:
     description: Abre o Livro de Receitas
     usage: /craftbook
+  pronto:
+    description: Marca/desmarca o jogador como pronto (visível apenas aos OPs)
+    usage: /pronto
+  anunciar:
+    description: Envia um anúncio em destaque para todos os jogadores
+    usage: /anunciar <mensagem>
+    permission: tls.admin
