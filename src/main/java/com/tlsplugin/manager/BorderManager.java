@@ -43,7 +43,7 @@ public class BorderManager implements Listener {
 
     public BorderManager(Tlsplugin plugin) {
         this.plugin = plugin;
-        List<Double> l = plugin.getConfig().getDoubleList("bordas");
+        List<Double> l = getModoConfig().getDoubleList("bordas");
         this.stages = (l == null || l.isEmpty())
                 ? Arrays.asList(10000.0, 9500.0, 8000.0, 5000.0, 2500.0, 1000.0, 500.0)
                 : l;
@@ -52,6 +52,35 @@ public class BorderManager implements Listener {
 
         loadState();
     }
+
+    // ── Helpers de configuração por modo ──────────────────────────────────────
+
+    private org.bukkit.configuration.ConfigurationSection getModoConfig() {
+        String modo = plugin.getConfig().getString("modo_jogo", "final");
+        org.bukkit.configuration.ConfigurationSection sec =
+                plugin.getConfig().getConfigurationSection("modos." + modo);
+        if (sec == null) {
+            plugin.getLogger().warning("[TLS] Modo de jogo '" + modo + "' não encontrado no config! A usar 'final'.");
+            sec = plugin.getConfig().getConfigurationSection("modos.final");
+        }
+        return sec;
+    }
+
+    private int getShrinkSeconds() {
+        org.bukkit.configuration.ConfigurationSection sec = getModoConfig();
+        return sec != null ? sec.getInt("tempo_shrink_segundos", 720) : 720;
+    }
+
+    private int getPauseSeconds() {
+        org.bukkit.configuration.ConfigurationSection sec = getModoConfig();
+        return sec != null ? sec.getInt("tempo_pausa_segundos", 30) : 30;
+    }
+
+    public String getModoAtivo() {
+        return plugin.getConfig().getString("modo_jogo", "final");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     public void saveState() {
         File file = new File(plugin.getDataFolder(), "estado.yml");
@@ -158,7 +187,7 @@ public class BorderManager implements Listener {
 
         broadcastFormatted(plugin.getConfig().getString("mensagens.borda_inicio"),
                 currentStageIndex + 1, stages.size(), stages.get(currentStageIndex + 1),
-                plugin.getConfig().getInt("tempo_shrink_segundos", 480));
+                getShrinkSeconds());
 
         scheduleNextShrink();
     }
@@ -178,8 +207,8 @@ public class BorderManager implements Listener {
         applyGameRulesForStage(currentStageIndex + 1);
 
         double to          = stages.get(currentStageIndex + 1);
-        int shrinkSeconds  = plugin.getConfig().getInt("tempo_shrink_segundos", 480);
-        int pauseSeconds   = plugin.getConfig().getInt("tempo_pausa_segundos",  30);
+        int shrinkSeconds  = getShrinkSeconds();
+        int pauseSeconds   = getPauseSeconds();
 
         World w = Bukkit.getWorlds().get(0);
         w.getWorldBorder().setCenter(0, 0);
@@ -268,7 +297,7 @@ public class BorderManager implements Listener {
         if (currentStageIndex < 0 || currentStageIndex >= stages.size()) return;
         World w              = Bukkit.getWorlds().get(0);
         double originalSize  = stages.get(currentStageIndex);
-        int shrinkSeconds    = plugin.getConfig().getInt("tempo_shrink_segundos", 480);
+        int shrinkSeconds    = getShrinkSeconds();
         w.getWorldBorder().setSize(originalSize);
         this.remainingShrinkSeconds = shrinkSeconds;
         updateBossBar(currentStageIndex + 1, stages.size(), originalSize, shrinkSeconds);
@@ -318,8 +347,7 @@ public class BorderManager implements Listener {
         bossBar.setTitle(ChatColor.translateAlternateColorCodes('§', text));
         bossBar.setColor(BarColor.RED);
 
-        double progress = Math.max(0.0, Math.min(1.0, secondsLeft /
-                plugin.getConfig().getInt("tempo_shrink_segundos", 480)));
+        double progress = Math.max(0.0, Math.min(1.0, secondsLeft / getShrinkSeconds()));
         bossBar.setProgress(progress);
     }
 
