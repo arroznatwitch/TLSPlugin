@@ -27,7 +27,7 @@ public class AllTeamsCreateCommand implements CommandExecutor {
         teams.put("orange", "󰀉");
     }
 
-    private static final String SEP = "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -52,12 +52,12 @@ public class AllTeamsCreateCommand implements CommandExecutor {
             created++;
         }
 
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         sender.sendMessage("§b§l  Equipas criadas");
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         sender.sendMessage("  §7Criadas:          §a" + created);
         sender.sendMessage("  §7Já existiam:      §e" + skipped);
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         return true;
     }
 }

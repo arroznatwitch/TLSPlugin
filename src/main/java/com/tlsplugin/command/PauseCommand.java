@@ -14,7 +14,7 @@ public class PauseCommand implements CommandExecutor {
     private final GameFreezeManager freezeManager;
     private final MVPStatsManager mvpStatsManager;
 
-    private static final String SEP = "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+
 
     public PauseCommand(BorderManager borderManager, GameFreezeManager freezeManager, MVPStatsManager mvpStatsManager) {
         this.borderManager   = borderManager;
@@ -25,12 +25,12 @@ public class PauseCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (borderManager.isPaused()) {
-            sender.sendMessage(SEP);
+            sender.sendMessage("");
             sender.sendMessage("§e§l  ⏸ Jogo pausado");
-            sender.sendMessage(SEP);
+            sender.sendMessage("");
             sender.sendMessage("  " + Tlsplugin.getInstance().getConfig().getString(
                     "mensagens_comandos.jogo_ja_pausado", "§cO jogo já está pausado!"));
-            sender.sendMessage(SEP);
+            sender.sendMessage("");
             return true;
         }
 
@@ -38,12 +38,12 @@ public class PauseCommand implements CommandExecutor {
         freezeManager.freezeAll();
         mvpStatsManager.onPause();
 
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         sender.sendMessage("§e§l  ⏸ Jogo pausado");
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         sender.sendMessage("  " + Tlsplugin.getInstance().getConfig().getString(
                 "mensagens_comandos.jogo_pausado", "§c⏸ Jogo pausado."));
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         return true;
     }
 }

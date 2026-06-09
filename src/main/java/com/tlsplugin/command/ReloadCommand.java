@@ -9,7 +9,7 @@ public class ReloadCommand implements CommandExecutor {
 
     private final Tlsplugin plugin;
 
-    private static final String SEP = "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+
 
     public ReloadCommand(Tlsplugin plugin) {
         this.plugin = plugin;
@@ -27,13 +27,13 @@ public class ReloadCommand implements CommandExecutor {
         plugin.getBorderManager().applyGameRulesForStage(
                 plugin.getBorderManager().getCurrentStage());
 
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         sender.sendMessage("§b§l  ↺ Configuração recarregada");
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         sender.sendMessage("  " + plugin.getConfig().getString(
                 "mensagens_comandos.reloadead", "§aConfiguração recarregada com sucesso!"));
         sender.sendMessage("  §7Recarregado por: §f" + sender.getName());
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
 
         plugin.getLogger().info("Configuração recarregada por " + sender.getName());
         return true;

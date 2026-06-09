@@ -15,7 +15,7 @@ public class StartGameCommand implements CommandExecutor {
 
     private final Tlsplugin plugin;
 
-    private static final String SEP = "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+
 
     public StartGameCommand(Tlsplugin plugin) {
         this.plugin = plugin;
@@ -30,13 +30,13 @@ public class StartGameCommand implements CommandExecutor {
         }
 
         if (args.length == 0 || !args[0].equalsIgnoreCase("confirmar")) {
-            sender.sendMessage(SEP);
+            sender.sendMessage("");
             sender.sendMessage("§e§l  ⚠ Iniciar jogo");
-            sender.sendMessage(SEP);
+            sender.sendMessage("");
             sender.sendMessage("  " + plugin.getConfig().getString(
                     "mensagens_comandos.jogo_confirmar_start",
                     "§eTens a certeza? Digita §f/startgame confirmar §epara prosseguir."));
-            sender.sendMessage(SEP);
+            sender.sendMessage("");
             return true;
         }
 
@@ -69,14 +69,14 @@ public class StartGameCommand implements CommandExecutor {
             }
         });
 
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         sender.sendMessage("§a§l  ▶ Jogo iniciado");
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         sender.sendMessage("  " + plugin.getConfig().getString(
                 "mensagens_comandos.jogo_iniciado", "§aO jogo começou e as regras foram aplicadas."));
         sender.sendMessage("  §7Modo: §b" + plugin.getBorderManager().getModoAtivo());
         sender.sendMessage("  §7Total de fases: §f" + plugin.getBorderManager().getTotalStages());
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         return true;
     }
 

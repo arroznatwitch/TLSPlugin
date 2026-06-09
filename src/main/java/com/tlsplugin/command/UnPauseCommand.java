@@ -14,7 +14,7 @@ public class UnPauseCommand implements CommandExecutor {
     private final GameFreezeManager freezeManager;
     private final MVPStatsManager mvpStatsManager;
 
-    private static final String SEP = "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+
 
     public UnPauseCommand(BorderManager borderManager, GameFreezeManager freezeManager, MVPStatsManager mvpStatsManager) {
         this.borderManager   = borderManager;
@@ -25,21 +25,21 @@ public class UnPauseCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (!borderManager.isPaused()) {
-            sender.sendMessage(SEP);
+            sender.sendMessage("");
             sender.sendMessage("§a§l  ▶ Retomar jogo");
-            sender.sendMessage(SEP);
+            sender.sendMessage("");
             sender.sendMessage("  " + Tlsplugin.getInstance().getConfig().getString(
                     "mensagens_comandos.jogo_nao_pausado", "§cO jogo não está pausado!"));
-            sender.sendMessage(SEP);
+            sender.sendMessage("");
             return true;
         }
 
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         sender.sendMessage("§a§l  ▶ Retomar jogo");
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         sender.sendMessage("  " + Tlsplugin.getInstance().getConfig().getString(
                 "mensagens_comandos.jogo_retomando", "§aRetomando o jogo em instantes..."));
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
 
         mvpStatsManager.onUnpause();
         freezeManager.unfreezeAfterCountdown(() -> {

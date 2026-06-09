@@ -8,7 +8,7 @@ import org.bukkit.entity.Player;
 
 public class TeamJoinCommand implements CommandExecutor {
 
-    private static final String SEP = "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -18,11 +18,11 @@ public class TeamJoinCommand implements CommandExecutor {
         }
 
         if (args.length < 2) {
-            sender.sendMessage(SEP);
+            sender.sendMessage("");
             sender.sendMessage("§c§l  Uso incorrecto");
-            sender.sendMessage(SEP);
+            sender.sendMessage("");
             sender.sendMessage("  §7Uso: §f/teamjoin <jogador> <equipa>");
-            sender.sendMessage(SEP);
+            sender.sendMessage("");
             return true;
         }
 
@@ -38,16 +38,16 @@ public class TeamJoinCommand implements CommandExecutor {
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "team join " + team + " " + targetName);
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + targetName + " parent set " + team);
 
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         sender.sendMessage("§b§l  Equipa actualizada");
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         if (targetName.equalsIgnoreCase(p.getName())) {
             sender.sendMessage("  §7Entraste na equipa: §f" + team);
         } else {
             sender.sendMessage("  §7Jogador: §f" + targetName);
             sender.sendMessage("  §7Equipa:  §f" + team);
         }
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         return true;
     }
 }

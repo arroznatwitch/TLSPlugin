@@ -12,7 +12,7 @@ public class EndGameCommand implements CommandExecutor {
     private final Tlsplugin plugin;
     private final BorderManager borderManager;
 
-    private static final String SEP = "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+
 
     public EndGameCommand(Tlsplugin plugin, BorderManager borderManager) {
         this.plugin = plugin;
@@ -31,13 +31,13 @@ public class EndGameCommand implements CommandExecutor {
                 "mensagens_comandos.endgame_palavra_confirmar", "confirmar");
 
         if (args.length == 0 || !args[0].equalsIgnoreCase(confirmarPalavra)) {
-            sender.sendMessage(SEP);
+            sender.sendMessage("");
             sender.sendMessage("§c§l  ⚠ Terminar jogo");
-            sender.sendMessage(SEP);
+            sender.sendMessage("");
             sender.sendMessage(plugin.getConfig().getString(
                     "mensagens_comandos.endgame_confirmar",
                     "  §cTens a certeza? Escreve §f/endgame confirmar §cpara terminar."));
-            sender.sendMessage(SEP);
+            sender.sendMessage("");
             return true;
         }
 
@@ -49,11 +49,11 @@ public class EndGameCommand implements CommandExecutor {
             plugin.getMVPStatsManager().saveStats();
         }
 
-        Bukkit.broadcastMessage(SEP);
+        Bukkit.broadcastMessage("");
         Bukkit.broadcastMessage(plugin.getConfig().getString(
                 "mensagens_comandos.jogo_terminado",
                 "§f[§bTLS§f] §c§lO jogo foi terminado pelo administrador!"));
-        Bukkit.broadcastMessage(SEP);
+        Bukkit.broadcastMessage("");
         return true;
     }
 }

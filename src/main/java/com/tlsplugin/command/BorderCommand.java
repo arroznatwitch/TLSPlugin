@@ -13,7 +13,7 @@ public class BorderCommand implements CommandExecutor {
         this.plugin = plugin;
     }
 
-    private static final String SEP = "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -25,13 +25,13 @@ public class BorderCommand implements CommandExecutor {
 
         plugin.getBorderManager().setToInitial();
 
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         sender.sendMessage("§b§l  Borda configurada");
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         sender.sendMessage(plugin.getConfig().getString(
                 "mensagens_comandos.borda_setada",
                 "  §7A borda inicial foi definida com sucesso."));
-        sender.sendMessage(SEP);
+        sender.sendMessage("");
         return true;
     }
 }
