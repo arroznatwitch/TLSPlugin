@@ -38,6 +38,7 @@ public class Tlsplugin extends JavaPlugin {
     private MVPStatsManager          mvpStatsManager;
     private PlayerPauseManager       pauseManager;
     private ProntoCommand            prontoCommand;
+    private ProximityAlertListener   proximityAlertListener;
 
     @Override
     public void onEnable() {
@@ -58,6 +59,7 @@ public class Tlsplugin extends JavaPlugin {
         this.mvpStatsManager.loadStats();
         this.pauseManager           = new PlayerPauseManager();
         this.prontoCommand          = new ProntoCommand(this);
+        this.proximityAlertListener = new ProximityAlertListener(this);
 
         // ==== REGISTER MANAGERS AS LISTENERS ====
         Bukkit.getPluginManager().registerEvents(borderManager, this);
