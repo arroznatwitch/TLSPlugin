@@ -4,8 +4,6 @@ import com.tlsplugin.Tlsplugin;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.World;
-import org.bukkit.entity.Player;
 
 public class BorderCommand implements CommandExecutor {
 
@@ -15,16 +13,25 @@ public class BorderCommand implements CommandExecutor {
         this.plugin = plugin;
     }
 
+    private static final String SEP = "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.isOp()) {
-            sender.sendMessage(plugin.getConfig().getString("mensagens_comandos.sem_permissao", "§cSem permissão."));
+            sender.sendMessage(plugin.getConfig().getString(
+                    "mensagens_comandos.sem_permissao", "§cSem permissão."));
             return true;
         }
 
-        // define a borda para o primeiro valor do config (inicial)
         plugin.getBorderManager().setToInitial();
-        sender.sendMessage(plugin.getConfig().getString("mensagens_comandos.borda_setada", "§eBorda setada."));
+
+        sender.sendMessage(SEP);
+        sender.sendMessage("§b§l  Borda configurada");
+        sender.sendMessage(SEP);
+        sender.sendMessage(plugin.getConfig().getString(
+                "mensagens_comandos.borda_setada",
+                "  §7A borda inicial foi definida com sucesso."));
+        sender.sendMessage(SEP);
         return true;
     }
 }

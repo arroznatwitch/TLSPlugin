@@ -8,41 +8,46 @@ import org.bukkit.entity.Player;
 
 public class TeamJoinCommand implements CommandExecutor {
 
+    private static final String SEP = "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player p)) {
-            sender.sendMessage("Somente jogadores podem usar este comando.");
+            sender.sendMessage("§cApenas jogadores podem usar este comando.");
             return true;
         }
 
         if (args.length < 2) {
-            p.sendMessage("§cUso: /teamjoin <jogador> <equipa>");
+            sender.sendMessage(SEP);
+            sender.sendMessage("§c§l  Uso incorrecto");
+            sender.sendMessage(SEP);
+            sender.sendMessage("  §7Uso: §f/teamjoin <jogador> <equipa>");
+            sender.sendMessage(SEP);
             return true;
         }
 
         String targetName = args[0];
-        String team = args[1];
+        String team       = args[1];
 
-        // Se for outro jogador, só OP pode
         if (!targetName.equalsIgnoreCase(p.getName()) && !p.isOp()) {
-            p.sendMessage("§cApenas OP pode adicionar outros jogadores a equipes.");
+            sender.sendMessage(com.tlsplugin.Tlsplugin.getInstance().getConfig()
+                    .getString("mensagens_comandos.sem_permissao", "§cSem permissão."));
             return true;
         }
 
-        // Executa o comando de equipa nativo do Minecraft
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                "team join " + team + " " + targetName);
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "team join " + team + " " + targetName);
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + targetName + " parent set " + team);
 
-        // CORREÇÃO: Removido o "group." para o LuckPerms encontrar o grupo corretamente
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                "lp user " + targetName + " parent set " + team);
-
+        sender.sendMessage(SEP);
+        sender.sendMessage("§b§l  Equipa actualizada");
+        sender.sendMessage(SEP);
         if (targetName.equalsIgnoreCase(p.getName())) {
-            p.sendMessage("§aVocê entrou na equipe " + team + " e recebeu o grupo.");
+            sender.sendMessage("  §7Entraste na equipa: §f" + team);
         } else {
-            p.sendMessage("§aJogador " + targetName + " entrou na equipe " + team + " e recebeu o grupo.");
+            sender.sendMessage("  §7Jogador: §f" + targetName);
+            sender.sendMessage("  §7Equipa:  §f" + team);
         }
-
+        sender.sendMessage(SEP);
         return true;
     }
 }

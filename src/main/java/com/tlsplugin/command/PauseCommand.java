@@ -1,5 +1,6 @@
 package com.tlsplugin.command;
 
+import com.tlsplugin.Tlsplugin;
 import com.tlsplugin.manager.BorderManager;
 import com.tlsplugin.manager.GameFreezeManager;
 import com.tlsplugin.manager.MVPStatsManager;
@@ -13,6 +14,8 @@ public class PauseCommand implements CommandExecutor {
     private final GameFreezeManager freezeManager;
     private final MVPStatsManager mvpStatsManager;
 
+    private static final String SEP = "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+
     public PauseCommand(BorderManager borderManager, GameFreezeManager freezeManager, MVPStatsManager mvpStatsManager) {
         this.borderManager   = borderManager;
         this.freezeManager   = freezeManager;
@@ -22,15 +25,25 @@ public class PauseCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (borderManager.isPaused()) {
-            sender.sendMessage(com.tlsplugin.Tlsplugin.getInstance().getConfig().getString("mensagens_comandos.jogo_ja_pausado", "§cO jogo já está pausado!"));
+            sender.sendMessage(SEP);
+            sender.sendMessage("§e§l  ⏸ Jogo pausado");
+            sender.sendMessage(SEP);
+            sender.sendMessage("  " + Tlsplugin.getInstance().getConfig().getString(
+                    "mensagens_comandos.jogo_ja_pausado", "§cO jogo já está pausado!"));
+            sender.sendMessage(SEP);
             return true;
         }
 
         borderManager.setPaused(true);
         freezeManager.freezeAll();
-        mvpStatsManager.onPause(); // Para o playtime durante a pausa
+        mvpStatsManager.onPause();
 
-        sender.sendMessage(com.tlsplugin.Tlsplugin.getInstance().getConfig().getString("mensagens_comandos.jogo_pausado", "§c⏸ Jogo pausado."));
+        sender.sendMessage(SEP);
+        sender.sendMessage("§e§l  ⏸ Jogo pausado");
+        sender.sendMessage(SEP);
+        sender.sendMessage("  " + Tlsplugin.getInstance().getConfig().getString(
+                "mensagens_comandos.jogo_pausado", "§c⏸ Jogo pausado."));
+        sender.sendMessage(SEP);
         return true;
     }
 }

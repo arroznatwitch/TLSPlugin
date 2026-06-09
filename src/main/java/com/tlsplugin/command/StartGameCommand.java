@@ -15,6 +15,8 @@ public class StartGameCommand implements CommandExecutor {
 
     private final Tlsplugin plugin;
 
+    private static final String SEP = "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+
     public StartGameCommand(Tlsplugin plugin) {
         this.plugin = plugin;
     }
@@ -22,16 +24,22 @@ public class StartGameCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.isOp()) {
-            sender.sendMessage(plugin.getConfig().getString("mensagens_comandos.sem_permissao", "§cSem permissão."));
+            sender.sendMessage(plugin.getConfig().getString(
+                    "mensagens_comandos.sem_permissao", "§cSem permissão."));
             return true;
         }
 
         if (args.length == 0 || !args[0].equalsIgnoreCase("confirmar")) {
-            sender.sendMessage(plugin.getConfig().getString("mensagens_comandos.jogo_confirmar_start", "§eConfirme com /startgame confirmar"));
+            sender.sendMessage(SEP);
+            sender.sendMessage("§e§l  ⚠ Iniciar jogo");
+            sender.sendMessage(SEP);
+            sender.sendMessage("  " + plugin.getConfig().getString(
+                    "mensagens_comandos.jogo_confirmar_start",
+                    "§eTens a certeza? Digita §f/startgame confirmar §epara prosseguir."));
+            sender.sendMessage(SEP);
             return true;
         }
 
-        // Iniciar ciclo e tracking
         plugin.getBorderManager().startCycle();
         plugin.getMVPStatsManager().resetAll();
         for (Player online : Bukkit.getOnlinePlayers()) {
@@ -39,9 +47,11 @@ public class StartGameCommand implements CommandExecutor {
         }
         plugin.getMVPStatsManager().startTracking();
 
-        sender.sendMessage(plugin.getConfig().getString("mensagens_comandos.jogo_iniciado", "§aO jogo começou."));
+        // Limpar lista de prontos ao iniciar
+        if (plugin.getProntoCommand() != null) {
+            plugin.getProntoCommand().limpar();
+        }
 
-        // Coloca todos em Adventure + vida e comida cheias
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (p.isOp()) continue;
             p.setGameMode(GameMode.ADVENTURE);
@@ -50,10 +60,7 @@ public class StartGameCommand implements CommandExecutor {
             p.setSaturation(20f);
         }
 
-        // Freeze todos os jogadores imediatamente
         plugin.getFreezeManager().freezeForStart();
-
-        // Countdown 5 → 1 → "COMEÇOU, BOA SORTE!" com sons e freeze
         plugin.getFreezeManager().startCountdown(() -> {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 if (p.isOp()) continue;
@@ -62,6 +69,14 @@ public class StartGameCommand implements CommandExecutor {
             }
         });
 
+        sender.sendMessage(SEP);
+        sender.sendMessage("§a§l  ▶ Jogo iniciado");
+        sender.sendMessage(SEP);
+        sender.sendMessage("  " + plugin.getConfig().getString(
+                "mensagens_comandos.jogo_iniciado", "§aO jogo começou e as regras foram aplicadas."));
+        sender.sendMessage("  §7Modo: §b" + plugin.getBorderManager().getModoAtivo());
+        sender.sendMessage("  §7Total de fases: §f" + plugin.getBorderManager().getTotalStages());
+        sender.sendMessage(SEP);
         return true;
     }
 
@@ -73,7 +88,6 @@ public class StartGameCommand implements CommandExecutor {
             return;
         }
         ItemStack book = cs.getItemStack();
-        // Só dá se o jogador não tiver já um
         if (!p.getInventory().containsAtLeast(book, 1)) {
             p.getInventory().addItem(book);
         }

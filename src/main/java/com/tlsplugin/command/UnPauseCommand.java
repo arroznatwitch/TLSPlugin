@@ -1,5 +1,6 @@
 package com.tlsplugin.command;
 
+import com.tlsplugin.Tlsplugin;
 import com.tlsplugin.manager.BorderManager;
 import com.tlsplugin.manager.GameFreezeManager;
 import com.tlsplugin.manager.MVPStatsManager;
@@ -13,6 +14,8 @@ public class UnPauseCommand implements CommandExecutor {
     private final GameFreezeManager freezeManager;
     private final MVPStatsManager mvpStatsManager;
 
+    private static final String SEP = "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+
     public UnPauseCommand(BorderManager borderManager, GameFreezeManager freezeManager, MVPStatsManager mvpStatsManager) {
         this.borderManager   = borderManager;
         this.freezeManager   = freezeManager;
@@ -22,14 +25,23 @@ public class UnPauseCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (!borderManager.isPaused()) {
-            sender.sendMessage(com.tlsplugin.Tlsplugin.getInstance().getConfig().getString("mensagens_comandos.jogo_nao_pausado", "§cO jogo não está pausado!"));
+            sender.sendMessage(SEP);
+            sender.sendMessage("§a§l  ▶ Retomar jogo");
+            sender.sendMessage(SEP);
+            sender.sendMessage("  " + Tlsplugin.getInstance().getConfig().getString(
+                    "mensagens_comandos.jogo_nao_pausado", "§cO jogo não está pausado!"));
+            sender.sendMessage(SEP);
             return true;
         }
 
-        sender.sendMessage(com.tlsplugin.Tlsplugin.getInstance().getConfig().getString("mensagens_comandos.jogo_retomando", "§aRetomando..."));
+        sender.sendMessage(SEP);
+        sender.sendMessage("§a§l  ▶ Retomar jogo");
+        sender.sendMessage(SEP);
+        sender.sendMessage("  " + Tlsplugin.getInstance().getConfig().getString(
+                "mensagens_comandos.jogo_retomando", "§aRetomando o jogo em instantes..."));
+        sender.sendMessage(SEP);
 
-        mvpStatsManager.onUnpause(); // Retoma o playtime
-
+        mvpStatsManager.onUnpause();
         freezeManager.unfreezeAfterCountdown(() -> {
             borderManager.setPaused(false);
             borderManager.resumeAfterPause();

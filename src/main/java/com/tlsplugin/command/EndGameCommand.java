@@ -12,6 +12,8 @@ public class EndGameCommand implements CommandExecutor {
     private final Tlsplugin plugin;
     private final BorderManager borderManager;
 
+    private static final String SEP = "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+
     public EndGameCommand(Tlsplugin plugin, BorderManager borderManager) {
         this.plugin = plugin;
         this.borderManager = borderManager;
@@ -20,30 +22,38 @@ public class EndGameCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (!sender.isOp()) {
-            sender.sendMessage(plugin.getConfig().getString("mensagens_comandos.sem_permissao", "§cSem permissão."));
+            sender.sendMessage(plugin.getConfig().getString(
+                    "mensagens_comandos.sem_permissao", "§cSem permissão."));
             return true;
         }
 
-        String confirmarPalavra = plugin.getConfig().getString("mensagens_comandos.endgame_palavra_confirmar", "confirmar");
+        String confirmarPalavra = plugin.getConfig().getString(
+                "mensagens_comandos.endgame_palavra_confirmar", "confirmar");
+
         if (args.length == 0 || !args[0].equalsIgnoreCase(confirmarPalavra)) {
-            sender.sendMessage(plugin.getConfig().getString("mensagens_comandos.endgame_confirmar",
-                    "§c⚠ Tens a certeza? Escreve §f/endgame confirmar §cpara terminar o jogo."));
+            sender.sendMessage(SEP);
+            sender.sendMessage("§c§l  ⚠ Terminar jogo");
+            sender.sendMessage(SEP);
+            sender.sendMessage(plugin.getConfig().getString(
+                    "mensagens_comandos.endgame_confirmar",
+                    "  §cTens a certeza? Escreve §f/endgame confirmar §cpara terminar."));
+            sender.sendMessage(SEP);
             return true;
         }
 
-        // Parar borda
         borderManager.stopAll();
 
-        // Parar tracking mas NÃO apagar os dados — fazer backup e manter para consulta
         if (plugin.getMVPStatsManager() != null) {
             plugin.getMVPStatsManager().stopTracking();
-            plugin.getMVPStatsManager().backupStats(); // Guardar backup com timestamp
-            plugin.getMVPStatsManager().saveStats();   // Manter dados actuais acessíveis
-            // NÃO chamar resetAll() — os dados do /mvp e /sobremvp ficam disponíveis
+            plugin.getMVPStatsManager().backupStats();
+            plugin.getMVPStatsManager().saveStats();
         }
 
-        String msg = plugin.getConfig().getString("mensagens_comandos.jogo_terminado", "§c[TLS] O jogo foi terminado!");
-        Bukkit.broadcastMessage(msg);
+        Bukkit.broadcastMessage(SEP);
+        Bukkit.broadcastMessage(plugin.getConfig().getString(
+                "mensagens_comandos.jogo_terminado",
+                "§f[§bTLS§f] §c§lO jogo foi terminado pelo administrador!"));
+        Bukkit.broadcastMessage(SEP);
         return true;
     }
 }

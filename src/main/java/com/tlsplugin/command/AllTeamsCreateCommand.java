@@ -16,23 +16,24 @@ public class AllTeamsCreateCommand implements CommandExecutor {
     private final Map<String, String> teams = new LinkedHashMap<>();
 
     public AllTeamsCreateCommand() {
-
-        teams.put("red", "󰀁");
-        teams.put("blue", "󰀂");
-        teams.put("green", "󰀃");
+        teams.put("red",    "󰀁");
+        teams.put("blue",   "󰀂");
+        teams.put("green",  "󰀃");
         teams.put("yellow", "󰀄");
-        teams.put("admin", "󰀅");
-        teams.put("pink", "󰀆");
-        teams.put("grey", "󰀇");
+        teams.put("admin",  "󰀅");
+        teams.put("pink",   "󰀆");
+        teams.put("grey",   "󰀇");
         teams.put("purple", "󰀈");
         teams.put("orange", "󰀉");
     }
 
+    private static final String SEP = "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-
         if (!sender.isOp()) {
-            sender.sendMessage("§cSem permissão.");
+            sender.sendMessage(com.tlsplugin.Tlsplugin.getInstance().getConfig()
+                    .getString("mensagens_comandos.sem_permissao", "§cSem permissão."));
             return true;
         }
 
@@ -42,30 +43,21 @@ public class AllTeamsCreateCommand implements CommandExecutor {
         int skipped = 0;
 
         for (Map.Entry<String, String> entry : teams.entrySet()) {
-
             String teamName = entry.getKey();
-            String symbol = entry.getValue();
-
-            // verifica se já existe
-            Team existingTeam = scoreboard.getTeam(teamName);
-
-            if (existingTeam != null) {
-                skipped++;
-                continue;
-            }
-
-            // cria apenas se não existir
+            String symbol   = entry.getValue();
+            Team existing   = scoreboard.getTeam(teamName);
+            if (existing != null) { skipped++; continue; }
             Team newTeam = scoreboard.registerNewTeam(teamName);
-
-            // define símbolo
             newTeam.prefix(Component.text(symbol + " "));
-
             created++;
         }
 
-        sender.sendMessage("§aCriadas: §f" + created);
-        sender.sendMessage("§eIgnoradas (já existiam): §f" + skipped);
-
+        sender.sendMessage(SEP);
+        sender.sendMessage("§b§l  Equipas criadas");
+        sender.sendMessage(SEP);
+        sender.sendMessage("  §7Criadas:          §a" + created);
+        sender.sendMessage("  §7Já existiam:      §e" + skipped);
+        sender.sendMessage(SEP);
         return true;
     }
 }
