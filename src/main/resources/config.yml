@@ -3,7 +3,7 @@
 # --- Modo de Jogo ---
 # Define qual o perfil de bordas ativo: "final" ou "teste"
 # "final" → 10 fases, 12 minutos por fase (jogo oficial)
-# "teste"  → 6 fases,  8 minutos por fase (para testar)
+# "teste"  → 7 fases,  10 minutos por fase (para testar)
 modo_jogo: "teste"
 
 modos:
@@ -27,10 +27,11 @@ modos:
       - 5000.0
       - 3750.0
       - 2500.0
+      - 1750.0
       - 1000.0
       - 500.0
       - 50.0
-    tempo_shrink_segundos: 480
+    tempo_shrink_segundos: 600
     tempo_pausa_segundos: 30
 
 # Mensagens no chat (PT-PT). Usa {stage}, {total}, {coord}, {time} como placeholders.
@@ -434,3 +435,30 @@ proximidade_fight:
   label_teleportar: "§b§l[TELEPORTAR]"
   # Texto que aparece ao passar o rato por cima do botão
   hover_teleportar: "§7Clica para te teleportares para a fight"
+
+# --- Drop de Ouro por Mobs ---
+mob_gold_drop:
+  habilitar: true
+  mobs:
+    witch: 0.05
+    vindicator: 0.05
+    enderman: 0.04
+    pillager: 0.04
+    skeleton: 0.03
+    cave_spider: 0.03
+    creeper: 0.02
+    zombie: 0.015
+    spider: 0.01
+    default: 0.01
+
+# --- Anunciador de Bordas no Chat ---
+border_announcer:
+  intervalo_minutos: 2.5
+  cabecalho: "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+  titulo: "§b§l⚔ BORDAS DO EVENTO ⚔"
+  rodape: "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+  cor_passada: "§8§m"
+  cor_atual: "§a"
+  cor_futura: "§f"
+  seta_atual: "▶ "
+  prefixo_futuro: "  "

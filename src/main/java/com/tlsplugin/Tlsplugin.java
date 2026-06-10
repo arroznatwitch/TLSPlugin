@@ -83,6 +83,7 @@ public class Tlsplugin extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(grapplerItemListener,  this);
         Bukkit.getPluginManager().registerEvents(goldPotionListener,    this);
         Bukkit.getPluginManager().registerEvents(new CraftBookListener(), this);
+        Bukkit.getPluginManager().registerEvents(new MobDropListener(this), this);
 
         // ItemsAdder load
         Bukkit.getPluginManager().registerEvents(new Listener() {
