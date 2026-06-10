@@ -5,6 +5,7 @@ import com.tlsplugin.gui.CraftBookGui;
 import com.tlsplugin.listeners.*;
 import com.tlsplugin.manager.BorderManager;
 import com.tlsplugin.manager.BorderScoreboardManager;
+import com.tlsplugin.manager.BorderTimerAnnouncer;
 import com.tlsplugin.manager.GameFreezeManager;
 import com.tlsplugin.manager.MVPStatsManager;
 import com.tlsplugin.manager.PlayerPauseManager;
@@ -27,6 +28,7 @@ public class Tlsplugin extends JavaPlugin {
 
     private BorderManager            borderManager;
     private BorderScoreboardManager  borderScoreboardManager;
+    private BorderTimerAnnouncer     borderTimerAnnouncer;
     private PvPListener              pvpListener;
     private KillListener             killListener;
     private DeathListener            deathListener;
@@ -45,43 +47,43 @@ public class Tlsplugin extends JavaPlugin {
         instance = this;
         saveDefaultConfig();
 
-        // Copiar gui.yml padrão se não existir
         if (!new java.io.File(getDataFolder(), "gui.yml").exists()) {
             saveResource("gui.yml", false);
         }
         CraftBookGui.loadConfig(getDataFolder());
 
         // ==== MANAGERS ====
-        this.freezeManager          = new GameFreezeManager(this);
-        this.borderManager          = new BorderManager(this);
+        this.freezeManager           = new GameFreezeManager(this);
+        this.borderManager           = new BorderManager(this);
+        this.borderTimerAnnouncer    = new BorderTimerAnnouncer(this, borderManager);
         this.borderScoreboardManager = new BorderScoreboardManager(this, borderManager);
-        this.mvpStatsManager        = new MVPStatsManager();
+        this.mvpStatsManager         = new MVPStatsManager();
         this.mvpStatsManager.loadStats();
-        this.pauseManager           = new PlayerPauseManager();
-        this.prontoCommand          = new ProntoCommand(this);
-        this.proximityAlertListener = new ProximityAlertListener(this);
+        this.pauseManager            = new PlayerPauseManager();
+        this.prontoCommand           = new ProntoCommand(this);
+        this.proximityAlertListener  = new ProximityAlertListener(this);
 
         // ==== REGISTER MANAGERS AS LISTENERS ====
         Bukkit.getPluginManager().registerEvents(borderManager, this);
         Bukkit.getPluginManager().registerEvents(freezeManager, this);
 
         // ==== LISTENERS ====
-        this.grapplerItemListener = new GrapplerItemListener(this);
-        this.pvpListener          = new PvPListener(this, freezeManager, mvpStatsManager, grapplerItemListener);
-        this.killListener         = new KillListener(this, borderManager, mvpStatsManager, pvpListener);
-        this.deathListener        = new DeathListener(this, mvpStatsManager);
-        this.spectatorListener    = new SpectatorInspectListener();
+        this.grapplerItemListener   = new GrapplerItemListener(this);
+        this.pvpListener            = new PvPListener(this, freezeManager, mvpStatsManager, grapplerItemListener);
+        this.killListener           = new KillListener(this, borderManager, mvpStatsManager, pvpListener);
+        this.deathListener          = new DeathListener(this, mvpStatsManager);
+        this.spectatorListener      = new SpectatorInspectListener();
         this.trackerCompassListener = new TrackerCompassListener(this);
-        this.goldPotionListener   = new GoldPotionListener(this);
+        this.goldPotionListener     = new GoldPotionListener(this);
 
         // ==== REGISTER LISTENERS ====
-        Bukkit.getPluginManager().registerEvents(pvpListener,           this);
-        Bukkit.getPluginManager().registerEvents(killListener,          this);
-        Bukkit.getPluginManager().registerEvents(deathListener,         this);
-        Bukkit.getPluginManager().registerEvents(spectatorListener,     this);
+        Bukkit.getPluginManager().registerEvents(pvpListener,            this);
+        Bukkit.getPluginManager().registerEvents(killListener,           this);
+        Bukkit.getPluginManager().registerEvents(deathListener,          this);
+        Bukkit.getPluginManager().registerEvents(spectatorListener,      this);
         Bukkit.getPluginManager().registerEvents(trackerCompassListener, this);
-        Bukkit.getPluginManager().registerEvents(grapplerItemListener,  this);
-        Bukkit.getPluginManager().registerEvents(goldPotionListener,    this);
+        Bukkit.getPluginManager().registerEvents(grapplerItemListener,   this);
+        Bukkit.getPluginManager().registerEvents(goldPotionListener,     this);
         Bukkit.getPluginManager().registerEvents(new CraftBookListener(), this);
         Bukkit.getPluginManager().registerEvents(new MobDropListener(this), this);
 
@@ -164,7 +166,6 @@ public class Tlsplugin extends JavaPlugin {
         if (grapplerItemListener   != null) grapplerItemListener.reloadRecipe();
     }
 
-    /** Chamado pelo /tlsreload — recarrega configs incluindo gui.yml */
     public void reloadAllConfigs() {
         reloadConfig();
         CraftBookGui.loadConfig(getDataFolder());
@@ -176,6 +177,7 @@ public class Tlsplugin extends JavaPlugin {
             borderManager.saveState();
             borderManager.markSafeExit();
         }
+        if (borderTimerAnnouncer != null) borderTimerAnnouncer.stop();
         if (mvpStatsManager != null) mvpStatsManager.saveStats();
         if (trackerCompassListener != null) trackerCompassListener.cleanup();
         if (grapplerItemListener   != null) grapplerItemListener.cleanup();
@@ -183,11 +185,12 @@ public class Tlsplugin extends JavaPlugin {
     }
 
     // ==== GETTERS ====
-    public static Tlsplugin getInstance()              { return instance; }
-    public BorderManager getBorderManager()            { return borderManager; }
-    public DeathListener getDeathListener()            { return deathListener; }
-    public GameFreezeManager getFreezeManager()        { return freezeManager; }
-    public MVPStatsManager getMVPStatsManager()        { return mvpStatsManager; }
-    public PlayerPauseManager getPauseManager()        { return pauseManager; }
-    public ProntoCommand getProntoCommand()            { return prontoCommand; }
+    public static Tlsplugin getInstance()                          { return instance; }
+    public BorderManager getBorderManager()                        { return borderManager; }
+    public BorderTimerAnnouncer getBorderTimerAnnouncer()          { return borderTimerAnnouncer; }
+    public DeathListener getDeathListener()                        { return deathListener; }
+    public GameFreezeManager getFreezeManager()                    { return freezeManager; }
+    public MVPStatsManager getMVPStatsManager()                    { return mvpStatsManager; }
+    public PlayerPauseManager getPauseManager()                    { return pauseManager; }
+    public ProntoCommand getProntoCommand()                        { return prontoCommand; }
 }

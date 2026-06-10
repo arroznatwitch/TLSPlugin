@@ -41,6 +41,7 @@ public class StartGameCommand implements CommandExecutor {
         }
 
         plugin.getBorderManager().startCycle();
+        plugin.getBorderTimerAnnouncer().start();
         plugin.getMVPStatsManager().resetAll();
         for (Player online : Bukkit.getOnlinePlayers()) {
             plugin.getMVPStatsManager().registerPlayer(online.getName());

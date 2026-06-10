@@ -65,10 +65,29 @@ public class DeathListener implements Listener {
 
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
-        Player p         = event.getEntity();
+        Player p = event.getEntity();
         Location deathLoc = p.getLocation().getBlock().getLocation();
 
-        // 2. SEMPRE forçar espectador se configurado
+        // Suprimir mensagem vanilla
+        event.setDeathMessage(null);
+
+        // 1. Mensagem de morte — SEMPRE, independente do revive
+        if (plugin.getConfig().getBoolean("mensagens_revive.anunciar_morte_chat", true)) {
+            int timeLimit = plugin.getConfig().getInt("revive.tempo_limite_revive_segundos", 300);
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                String msg = plugin.getConfig()
+                        .getString("mensagens_revive.morte_anuncio_chat", "§c💀 {player} morreu!")
+                        .replace("{player}", p.getName())
+                        .replace("{tempo_limite}", String.valueOf(TimeUnit.SECONDS.toMinutes(timeLimit)))
+                        .replace("{bloco_marcador}", "X/Z " + deathLoc.getBlockX() + "/" + deathLoc.getBlockZ());
+                online.sendMessage(msg);
+            }
+            String title    = plugin.getConfig().getString("mensagens_revive.morte_anuncio_title",    "MORTE");
+            String subtitle = plugin.getConfig().getString("mensagens_revive.morte_anuncio_subtitle", "Aguarde reanimação!");
+            p.sendTitle(title, subtitle, 10, 70, 20);
+        }
+
+        // 2. Forçar espectador
         boolean forceSpectator = plugin.getConfig().getBoolean("revive.forcamorte_spectator", true);
         if (forceSpectator) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -81,12 +100,11 @@ public class DeathListener implements Listener {
 
         // 3. Sistema de Revive (Corpo/Holograma)
         if (!plugin.getConfig().getBoolean("revive.habilitar", true) ||
-            !plugin.getConfig().getBoolean("revive.habilitar_corpo_revive", true)) {
+                !plugin.getConfig().getBoolean("revive.habilitar_corpo_revive", true)) {
             return;
         }
 
         int timeLimit = plugin.getConfig().getInt("revive.tempo_limite_revive_segundos", 300);
-
         event.setDroppedExp(0);
         removeBody(p.getName());
 
@@ -151,21 +169,6 @@ public class DeathListener implements Listener {
             }
         }, totalTicks);
         activeTasks.put(p.getName(), expireTask);
-
-        // 4. Mensagem de anúncio
-        if (plugin.getConfig().getBoolean("mensagens_revive.anunciar_morte_chat", true)) {
-            for (Player online : Bukkit.getOnlinePlayers()) {
-                String msg = plugin.getConfig()
-                        .getString("mensagens_revive.morte_anuncio_chat", "§c💀 {player} morreu!")
-                        .replace("{player}", p.getName())
-                        .replace("{tempo_limite}", String.valueOf(TimeUnit.SECONDS.toMinutes(timeLimit)))
-                        .replace("{bloco_marcador}", "X/Z " + deathLoc.getBlockX() + "/" + deathLoc.getBlockZ());
-                online.sendMessage(msg);
-            }
-        }
-        String title    = plugin.getConfig().getString("mensagens_revive.morte_anuncio_title",    "MORTE");
-        String subtitle = plugin.getConfig().getString("mensagens_revive.morte_anuncio_subtitle", "Aguarde reanimação!");
-        p.sendTitle(title, subtitle, 10, 70, 20);
     }
 
     @EventHandler
@@ -190,14 +193,24 @@ public class DeathListener implements Listener {
     public void onSpectatorTeleport(PlayerTeleportEvent e) {
         Player p = e.getPlayer();
         if (p.getGameMode() != GameMode.SPECTATOR) return;
-        if (e.getCause() == PlayerTeleportEvent.TeleportCause.SPECTATE) {
-            if (p.getSpectatorTarget() instanceof Player target) {
-                Team pt = p.getScoreboard().getEntryTeam(p.getName());
-                Team tt = target.getScoreboard().getEntryTeam(target.getName());
-                if (pt == null || tt == null || !pt.equals(tt)) {
-                    e.setCancelled(true);
-                    p.sendMessage("§cNão podes espiar jogadores de outras equipas.");
-                }
+        if (e.getCause() != PlayerTeleportEvent.TeleportCause.SPECTATE) return;
+
+        boolean habilitar = plugin.getConfig().getBoolean("spectator.habilitar_espiar", true);
+        if (!habilitar) {
+            e.setCancelled(true);
+            p.sendMessage(plugin.getConfig().getString("spectator.mensagem_desativado",
+                    "§cNão podes espiar jogadores."));
+            return;
+        }
+
+        boolean restringir_equipa = plugin.getConfig().getBoolean("spectator.restringir_mesma_equipa", true);
+        if (restringir_equipa && p.getSpectatorTarget() instanceof Player target) {
+            Team pt = p.getScoreboard().getEntryTeam(p.getName());
+            Team tt = target.getScoreboard().getEntryTeam(target.getName());
+            if (pt == null || tt == null || !pt.equals(tt)) {
+                e.setCancelled(true);
+                p.sendMessage(plugin.getConfig().getString("spectator.mensagem_equipa_errada",
+                        "§cNão podes espiar jogadores de outras equipas."));
             }
         }
     }

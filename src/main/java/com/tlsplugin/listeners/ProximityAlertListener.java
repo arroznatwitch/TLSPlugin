@@ -88,28 +88,25 @@ public class ProximityAlertListener {
                 .replace("{b}", b.getName())
                 .replace("{dist}", String.valueOf(dist));
 
-        // Teleportar para o jogador A (mais próximo de iniciar a fight)
-        String tpCmd = "/tp " + a.getName();
-
-        // Texto clicável [TELEPORTAR]
         String labelTp = plugin.getConfig().getString(
                 "proximidade_fight.label_teleportar", "§b§l[TELEPORTAR]");
         String hoverTp = plugin.getConfig().getString(
                 "proximidade_fight.hover_teleportar", "§7Clica para te teleportares para a fight");
 
-        TextComponent mensagem = new TextComponent(msg + " ");
-
-        TextComponent botao = new TextComponent(labelTp);
-        botao.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, tpCmd));
-        botao.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                new ComponentBuilder(hoverTp).create()));
-
-        mensagem.addExtra(botao);
-
         for (Player op : Bukkit.getOnlinePlayers()) {
-            if (op.isOp()) {
-                op.spigot().sendMessage(mensagem);
-            }
+            if (!op.isOp()) continue;
+
+            // Comando de TP directo para o OP que clica
+            String tpCmd = "/tp " + op.getName() + " " + a.getName();
+
+            TextComponent mensagem = new TextComponent(msg + " ");
+            TextComponent botao = new TextComponent(labelTp);
+            botao.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, tpCmd));
+            botao.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                    new ComponentBuilder(hoverTp).create()));
+
+            mensagem.addExtra(botao);
+            op.spigot().sendMessage(mensagem);
         }
     }
 

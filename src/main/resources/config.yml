@@ -462,3 +462,10 @@ border_announcer:
   cor_futura: "§f"
   seta_atual: "▶ "
   prefixo_futuro: "  "
+
+# --- Spectator ---
+spectator:
+  habilitar_espiar: true
+  restringir_mesma_equipa: true
+  mensagem_desativado: "§f[§bTLS§f] §cNão podes espiar jogadores."
+  mensagem_equipa_errada: "§f[§bTLS§f] §cNão podes espiar jogadores de outras equipas."

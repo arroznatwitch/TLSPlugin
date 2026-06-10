@@ -42,6 +42,7 @@ public class EndGameCommand implements CommandExecutor {
         }
 
         borderManager.stopAll();
+        plugin.getBorderTimerAnnouncer().stop();
 
         if (plugin.getMVPStatsManager() != null) {
             plugin.getMVPStatsManager().stopTracking();
