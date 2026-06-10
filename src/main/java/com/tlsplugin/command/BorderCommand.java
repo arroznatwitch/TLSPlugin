@@ -1,9 +1,12 @@
 package com.tlsplugin.command;
 
 import com.tlsplugin.Tlsplugin;
+import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 
 public class BorderCommand implements CommandExecutor {
 
@@ -12,8 +15,6 @@ public class BorderCommand implements CommandExecutor {
     public BorderCommand(Tlsplugin plugin) {
         this.plugin = plugin;
     }
-
-
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -24,6 +25,11 @@ public class BorderCommand implements CommandExecutor {
         }
 
         plugin.getBorderManager().setToInitial();
+
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (p.isOp()) continue;
+            p.setGameMode(GameMode.ADVENTURE);
+        }
 
         sender.sendMessage("");
         sender.sendMessage("§b§l  Borda configurada");
