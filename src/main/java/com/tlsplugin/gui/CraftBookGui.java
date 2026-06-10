@@ -212,13 +212,13 @@ public class CraftBookGui {
                 "tls_plugin:tls_special_apple",
                 "tls_plugin:goldpotion_item",
                 "tls_plugin:grappler_item",
-                "tls_plugin:tracker_compass",
+                "tls_plugin:tls_tracker_compass",
                 "tls_plugin:kit_completo",
                 "tls_plugin:kit_parcial"
         };
         String[] configKeys = {
                 "tls_special_apple", "goldpotion_item", "grappler_item",
-                "tracker_compass", "kit_completo", "kit_parcial"
+                "tls_tracker_compass", "kit_completo", "kit_parcial"
         };
         String[] fallbackNames = {
                 "§a§lMaçã Dourada Especial", "§e§lPoção Dourada", "§5§lGrappler",
@@ -305,7 +305,7 @@ public class CraftBookGui {
             case "tls_plugin:tls_special_apple": loreKey = "med_items.special_apple.lore"; break;
             case "tls_plugin:kit_completo":      loreKey = "med_items.kit_completo.lore"; break;
             case "tls_plugin:kit_parcial":       loreKey = "med_items.kit_parcial.lore"; break;
-            case "tls_plugin:tracker_compass": loreKey = "compass_tracker.lore"; break;
+            case "tls_plugin:tls_tracker_compass": loreKey = "compass_tracker.lore"; break;
             default: return;
         }
 
