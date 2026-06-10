@@ -7,7 +7,6 @@ import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
-import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
@@ -89,11 +88,8 @@ public class ProximityAlertListener {
                 .replace("{b}", b.getName())
                 .replace("{dist}", String.valueOf(dist));
 
-        // Localização intermédia entre os dois jogadores para o tp
-        Location midpoint = a.getLocation().clone().add(b.getLocation()).multiply(0.5);
-        midpoint.setWorld(a.getWorld());
-
-        String tpCmd = "tp " + midpoint.getBlockX() + " " + midpoint.getBlockY() + " " + midpoint.getBlockZ();
+        // Teleportar para o jogador A (mais próximo de iniciar a fight)
+        String tpCmd = "/tp " + a.getName();
 
         // Texto clicável [TELEPORTAR]
         String labelTp = plugin.getConfig().getString(
@@ -104,7 +100,7 @@ public class ProximityAlertListener {
         TextComponent mensagem = new TextComponent(msg + " ");
 
         TextComponent botao = new TextComponent(labelTp);
-        botao.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/" + tpCmd));
+        botao.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, tpCmd));
         botao.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
                 new ComponentBuilder(hoverTp).create()));
 
