@@ -207,25 +207,26 @@ public class CraftBookGui {
         Inventory inv = Bukkit.createInventory(null, 54, PREFIX_SPECIAL);
         fillGlass(inv);
 
-        int[] slots = {10, 12, 14, 28, 30};
+        int[] slots = {10, 12, 14, 16, 28, 30, 32};
         String[] ids = {
                 "tls_plugin:tls_special_apple",
                 "tls_plugin:goldpotion_item",
                 "tls_plugin:grappler_item",
+                "tls_plugin:tracker_compass",
                 "tls_plugin:kit_completo",
                 "tls_plugin:kit_parcial"
         };
         String[] configKeys = {
                 "tls_special_apple", "goldpotion_item", "grappler_item",
-                "kit_completo", "kit_parcial"
+                "tracker_compass", "kit_completo", "kit_parcial"
         };
         String[] fallbackNames = {
                 "§a§lMaçã Dourada Especial", "§e§lPoção Dourada", "§5§lGrappler",
-                "§e§lKit Médico (Completo)", "§c§lKit Médico (Parcial)"
+                "§b§lTracker Compass", "§e§lKit Médico (Completo)", "§c§lKit Médico (Parcial)"
         };
         Material[] fallbacks = {
                 Material.GOLDEN_APPLE, Material.POTION, Material.FISHING_ROD,
-                Material.PAPER, Material.PAPER
+                Material.COMPASS, Material.PAPER, Material.PAPER
         };
 
         String loreEsp = cfgStr("craft_book.lores.clique_especial", "§7Clique para ver a receita");
@@ -234,6 +235,7 @@ public class CraftBookGui {
         for (int i = 0; i < ids.length; i++) {
             boolean enabled = cfgBool("craft_book.special_items." + configKeys[i] + ".habilitar", true);
             if (!enabled) continue;
+            if (slotIndex >= slots.length) break;
 
             String displayName = cfgStr("craft_book.special_items." + configKeys[i] + ".nome_display",
                     fallbackNames[i]);
@@ -303,6 +305,7 @@ public class CraftBookGui {
             case "tls_plugin:tls_special_apple": loreKey = "med_items.special_apple.lore"; break;
             case "tls_plugin:kit_completo":      loreKey = "med_items.kit_completo.lore"; break;
             case "tls_plugin:kit_parcial":       loreKey = "med_items.kit_parcial.lore"; break;
+            case "tls_plugin:tracker_compass": loreKey = "compass_tracker.lore"; break;
             default: return;
         }
 
