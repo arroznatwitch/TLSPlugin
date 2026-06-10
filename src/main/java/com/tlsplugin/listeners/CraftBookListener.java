@@ -164,6 +164,7 @@ public class CraftBookListener implements Listener {
             case "Grappler":              return "tls_plugin:grappler_item";
             case "Kit Médico (Completo)": return "tls_plugin:kit_completo";
             case "Kit Médico (Parcial)":  return "tls_plugin:kit_parcial";
+            case "Tracker Compass":       return "tls_plugin:tracker_compass";
             default:                      return null;
         }
     }

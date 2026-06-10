@@ -78,3 +78,7 @@ craft_book:
       habilitar:         false
       habilitar_receita: false
       nome_display:      "§c§lKit Médico (Parcial)"
+    tracker_compass:
+      habilitar:         true
+      habilitar_receita: true
+      nome_display:      "§b§lTracker Compass"
