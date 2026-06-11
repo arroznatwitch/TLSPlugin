@@ -23,7 +23,7 @@ import java.util.*;
 public class BorderManager implements Listener {
 
     private final Tlsplugin plugin;
-    private final List<Double> stages;
+    private List<Double> stages;
     private int currentStageIndex = -1;
     private BukkitTask pauseTask;
     private BukkitTask alertTask;
@@ -78,6 +78,14 @@ public class BorderManager implements Listener {
 
     public String getModoAtivo() {
         return plugin.getConfig().getString("modo_jogo", "final");
+    }
+
+    /** Recarrega a lista de bordas do modo ativo — chamado após reloadConfig(). */
+    public void reloadStages() {
+        List<Double> l = getModoConfig().getDoubleList("bordas");
+        this.stages = (l == null || l.isEmpty())
+                ? Arrays.asList(10000.0, 9500.0, 8000.0, 5000.0, 2500.0, 1000.0, 500.0)
+                : l;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

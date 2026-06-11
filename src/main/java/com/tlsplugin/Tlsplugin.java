@@ -1,6 +1,8 @@
 package com.tlsplugin;
 
 import com.tlsplugin.command.*;
+import com.tlsplugin.gui.ConfigGui;
+import com.tlsplugin.gui.ConfigGuiListener;
 import com.tlsplugin.gui.CraftBookGui;
 import com.tlsplugin.listeners.*;
 import com.tlsplugin.manager.BorderManager;
@@ -146,6 +148,10 @@ public class Tlsplugin extends JavaPlugin {
         });
         getCommand("pronto").setExecutor(prontoCommand);
         getCommand("anunciar").setExecutor(new AnunciarCommand(this));
+        ConfigGui        configGui        = new ConfigGui(this);
+        ConfigGuiListener configGuiListener = new ConfigGuiListener(this, configGui);
+        Bukkit.getPluginManager().registerEvents(configGuiListener, this);
+        getCommand("tlsconfig").setExecutor(new ConfigCommand(this, configGui, configGuiListener));
 
         // ==== RECIPES ====
         if (Bukkit.getPluginManager().isPluginEnabled("ItemsAdder")) {
@@ -169,6 +175,7 @@ public class Tlsplugin extends JavaPlugin {
     public void reloadAllConfigs() {
         reloadConfig();
         CraftBookGui.loadConfig(getDataFolder());
+        if (borderManager != null) borderManager.reloadStages();
     }
 
     @Override

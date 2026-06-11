@@ -2,6 +2,7 @@ package com.tlsplugin.listeners;
 
 import com.tlsplugin.Tlsplugin;
 import org.bukkit.World;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -42,7 +43,17 @@ public class MobDropListener implements Listener {
         else if (entity instanceof Spider)     chance = plugin.getConfig().getDouble(path + "spider");
         else                                   chance = plugin.getConfig().getDouble(path + "default");
 
-        if (Math.random() < chance) {
+        // Aumenta a chance com o encantamento Pilhagem/Looting do matador
+        Player killer = event.getEntity().getKiller();
+        int looting = 0;
+        if (killer != null) {
+            ItemStack weapon = killer.getInventory().getItemInMainHand();
+            looting = weapon.getEnchantmentLevel(Enchantment.LOOTING);
+        }
+        // Cada nível de Looting adiciona 50% da chance base (Looting III = 2.5× base)
+        double effectiveChance = chance * (1.0 + looting * 0.5);
+
+        if (Math.random() < effectiveChance) {
             entity.getWorld().dropItemNaturally(
                     entity.getLocation(),
                     new ItemStack(Material.GOLD_INGOT, 1)

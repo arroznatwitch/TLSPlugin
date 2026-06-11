@@ -1,0 +1,84 @@
+# ─────────────────────────────────────────────────────────
+#  TLS Plugin — Configuração do Livro de Receitas (GUI)
+#  Ficheiro: plugins/TLSPlugin/gui.yml
+#  Recarregar: /tlsreload
+# ─────────────────────────────────────────────────────────
+
+craft_book:
+
+  # Títulos dos menus (não alteres a parte §0 no início — é usada para
+  # identificar os menus internamente e evitar conflitos com outros plugins)
+  titulos:
+    principal:    "§0 §lLivro de Receitas"
+    categorias:   "§0§lArmas de "       # + nome do tier (ex: "Armas de Ferro")
+    receita:      "§0 Receita: "        # + nome da arma ou item
+    especiais:    "§0§lItens Especiais"
+
+  # Material de fundo dos menus (slots vazios)
+  # Use nomes válidos do Bukkit: GRAY_STAINED_GLASS_PANE, BLACK_STAINED_GLASS_PANE, etc.
+  fundo:
+    cor_geral:  GRAY_STAINED_GLASS_PANE
+    cor_grelha: LIGHT_GRAY_STAINED_GLASS_PANE  # slots vazios da grelha 3x3
+
+  # Texto dos lores dos itens no menu
+  lores:
+    clique_categoria:  "§7Clique para ver as receitas"
+    clique_arma:       "§7Clique para ver a receita"
+    clique_especial:   "§7Clique para ver a receita"
+    ingrediente:       "§7Ingrediente"
+    resultado:         "§7Resultado §8x1"
+    voltar:            "§7Clique para voltar"
+
+  # Texto do botão de voltar
+  botao_voltar: "§c§l← Voltar"
+
+  # Categorias de armas — tiers disponíveis e as suas cores
+  # Não alteres os IDs (WOODEN, STONE...) — são usados internamente
+  tiers:
+    WOODEN:
+      nome:     "Madeira"
+      cor:      "§6"
+    STONE:
+      nome:     "Pedra"
+      cor:      "§7"
+    IRON:
+      nome:     "Ferro"
+      cor:      "§f"
+    GOLDEN:
+      nome:     "Ouro"
+      cor:      "§e"
+    COPPER:
+      nome:     "Cobre"
+      cor:      "§c"
+    DIAMOND:
+      nome:     "Diamante"
+      cor:      "§b"
+
+  # Itens especiais — habilitar/desabilitar no GUI e no crafting
+  # habilitar:         aparece no menu do Livro de Receitas
+  # habilitar_receita: jogadores conseguem craftar o item
+  special_items:
+    tls_special_apple:
+      habilitar:         true
+      habilitar_receita: true
+      nome_display:      "§a§lMaçã Dourada Especial"
+    goldpotion_item:
+      habilitar:         true
+      habilitar_receita: true
+      nome_display:      "§e§lPoção Dourada"
+    grappler_item:
+      habilitar:         true
+      habilitar_receita: true
+      nome_display:      "§5§lGrappler"
+    kit_completo:
+      habilitar:         false
+      habilitar_receita: false
+      nome_display:      "§e§lKit Médico (Completo)"
+    kit_parcial:
+      habilitar:         false
+      habilitar_receita: false
+      nome_display:      "§c§lKit Médico (Parcial)"
+    tls_tracker_compass:
+      habilitar:         true
+      habilitar_receita: true
+      nome_display:      "§b§lTracker Compass"

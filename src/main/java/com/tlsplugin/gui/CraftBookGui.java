@@ -438,6 +438,14 @@ public class CraftBookGui {
                 g[3]=rWool; g[4]=apple; g[5]=rWool;
                 g[6]=iron;  g[7]=rWool; g[8]=iron;
                 break;
+            case "tls_plugin:tls_tracker_compass":
+                ItemStack compass = makeItem(Material.COMPASS, "§fCompass", Arrays.asList(loreIng));
+                g[1] = gold;
+                g[3] = gold;
+                g[4] = compass;
+                g[5] = gold;
+                g[7] = gold;
+                break;
         }
         return g;
     }
