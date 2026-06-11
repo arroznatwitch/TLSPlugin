@@ -69,6 +69,10 @@ commands:
     description: Gestão de spawns de equipas
     usage: /tls <setspawn|tp|spawns|delspawn> [args]
     permission: tls.admin
-  tpspawn:
+  tlspawn:
     description: Teleporta para o spawn da tua equipa
-    usage: /tpspawn
+    usage: /tlspawn
+  tlssign:
+    description: Gestão de placas interativas com permissão
+    usage: /tlssign <set|remove|list|info> [args]
+    permission: tls.admin

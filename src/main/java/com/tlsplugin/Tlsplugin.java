@@ -5,21 +5,18 @@ import com.tlsplugin.gui.ConfigGui;
 import com.tlsplugin.gui.ConfigGuiListener;
 import com.tlsplugin.gui.CraftBookGui;
 import com.tlsplugin.listeners.*;
-import com.tlsplugin.manager.BorderManager;
-import com.tlsplugin.manager.BorderScoreboardManager;
-import com.tlsplugin.manager.BorderTimerAnnouncer;
-import com.tlsplugin.manager.GameFreezeManager;
-import com.tlsplugin.manager.MVPStatsManager;
-import com.tlsplugin.manager.PlayerPauseManager;
+import com.tlsplugin.manager.*;
 import com.tlsplugin.utils.GrapplerItem;
 import com.tlsplugin.utils.KitMedicRecipe;
 import com.tlsplugin.utils.RecipeUnlocker;
 import com.tlsplugin.utils.SpecialAppleRecipe;
 import dev.lone.itemsadder.api.Events.ItemsAdderLoadDataEvent;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -29,6 +26,7 @@ public class Tlsplugin extends JavaPlugin {
     private static Tlsplugin instance;
 
     private BorderManager            borderManager;
+    private SpawnManager             spawnManager;
     private BorderScoreboardManager  borderScoreboardManager;
     private BorderTimerAnnouncer     borderTimerAnnouncer;
     private PvPListener              pvpListener;
@@ -55,6 +53,7 @@ public class Tlsplugin extends JavaPlugin {
         CraftBookGui.loadConfig(getDataFolder());
 
         // ==== MANAGERS ====
+        this.spawnManager            = new SpawnManager(this);
         this.freezeManager           = new GameFreezeManager(this);
         this.borderManager           = new BorderManager(this);
         this.borderTimerAnnouncer    = new BorderTimerAnnouncer(this, borderManager);
@@ -115,6 +114,17 @@ public class Tlsplugin extends JavaPlugin {
             }
         }, this);
 
+        // OPs entram em Criativo no mundo "world"
+        Bukkit.getPluginManager().registerEvents(new Listener() {
+            @EventHandler
+            public void onWorldChange(PlayerChangedWorldEvent e) {
+                Player p = e.getPlayer();
+                if (p.isOp() && p.getWorld().getName().equals("world")) {
+                    p.setGameMode(GameMode.CREATIVE);
+                }
+            }
+        }, this);
+
         // Jogadores já online (reload)
         for (Player p : Bukkit.getOnlinePlayers()) {
             borderScoreboardManager.create(p);
@@ -148,7 +158,12 @@ public class Tlsplugin extends JavaPlugin {
         });
         getCommand("pronto").setExecutor(prontoCommand);
         getCommand("anunciar").setExecutor(new AnunciarCommand(this));
+        getCommand("tls").setExecutor(new TlsCommand(this, spawnManager));
+        getCommand("tlspawn").setExecutor(new TpSpawnCommand(this, spawnManager));
         getCommand("tlsworld").setExecutor(new WorldCommand(this));
+        SignManager signManager = new SignManager(this);
+        getCommand("tlssign").setExecutor(new TlsSignCommand(this, signManager));
+        Bukkit.getPluginManager().registerEvents(new com.tlsplugin.listeners.SignListener(this, signManager), this);
         ConfigGui        configGui        = new ConfigGui(this);
         ConfigGuiListener configGuiListener = new ConfigGuiListener(this, configGui);
         Bukkit.getPluginManager().registerEvents(configGuiListener, this);
@@ -195,6 +210,7 @@ public class Tlsplugin extends JavaPlugin {
     // ==== GETTERS ====
     public static Tlsplugin getInstance()                          { return instance; }
     public BorderManager getBorderManager()                        { return borderManager; }
+    public SpawnManager getSpawnManager()                          { return spawnManager; }
     public BorderTimerAnnouncer getBorderTimerAnnouncer()          { return borderTimerAnnouncer; }
     public DeathListener getDeathListener()                        { return deathListener; }
     public GameFreezeManager getFreezeManager()                    { return freezeManager; }

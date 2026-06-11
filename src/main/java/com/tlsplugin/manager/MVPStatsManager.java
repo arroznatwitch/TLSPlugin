@@ -34,6 +34,7 @@ public class MVPStatsManager {
         public int revivals = 0;
         public long joinTime = System.currentTimeMillis();
         public long lastActivityTime = System.currentTimeMillis();
+        public long deathTime = 0; // 0 = vivo; >0 = timestamp da morte
 
         public PlayerStats(String playerName) {
             this.playerName = playerName;
@@ -60,7 +61,8 @@ public class MVPStatsManager {
         }
 
         public long getAliveTimeMinutes(long totalPausedMs) {
-            long aliveMs = System.currentTimeMillis() - joinTime - totalPausedMs;
+            long endTime = deathTime > 0 ? deathTime : System.currentTimeMillis();
+            long aliveMs = endTime - joinTime - totalPausedMs;
             if (aliveMs < 0) aliveMs = 0;
             return TimeUnit.MILLISECONDS.toMinutes(aliveMs);
         }
@@ -71,7 +73,8 @@ public class MVPStatsManager {
         }
 
         public int calculateTimePoints(long totalPausedMs) {
-            long aliveMs = System.currentTimeMillis() - joinTime - totalPausedMs;
+            long endTime = deathTime > 0 ? deathTime : System.currentTimeMillis();
+            long aliveMs = endTime - joinTime - totalPausedMs;
             if (aliveMs < 0) aliveMs = 0;
             long aliveMinutes = TimeUnit.MILLISECONDS.toMinutes(aliveMs);
 
@@ -182,7 +185,11 @@ public class MVPStatsManager {
     public void addDeath(String playerName) {
         if (!gameStarted || !isEligibleInternal(playerName)) return;
         PlayerStats stats = playerStats.get(playerName);
-        if (stats != null) { stats.deaths++; stats.lastActivityTime = System.currentTimeMillis(); }
+        if (stats != null) {
+            stats.deaths++;
+            stats.lastActivityTime = System.currentTimeMillis();
+            stats.deathTime = System.currentTimeMillis(); // congela o tempo vivo
+        }
     }
 
     public void addRevival(String playerName) {
@@ -281,6 +288,7 @@ public class MVPStatsManager {
                 yaml.set(path + "revivals",         stats.revivals);
                 yaml.set(path + "joinTime",         stats.joinTime);
                 yaml.set(path + "lastActivityTime", stats.lastActivityTime);
+                yaml.set(path + "deathTime",        stats.deathTime);
             }
         }
         try {
@@ -312,6 +320,7 @@ public class MVPStatsManager {
                     stats.revivals         = yaml.getInt(path + "revivals");
                     stats.joinTime         = yaml.getLong(path + "joinTime");
                     stats.lastActivityTime = yaml.getLong(path + "lastActivityTime");
+                    stats.deathTime        = yaml.getLong(path + "deathTime", 0);
                     playerStats.put(pName, stats);
                 }
             }

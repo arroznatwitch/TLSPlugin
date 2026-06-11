@@ -54,7 +54,10 @@ public class StartGameCommand implements CommandExecutor {
         }
 
         for (Player p : Bukkit.getOnlinePlayers()) {
-            if (p.isOp()) continue;
+            if (p.isOp()) {
+                p.setGameMode(GameMode.CREATIVE);
+                continue;
+            }
             p.setGameMode(GameMode.ADVENTURE);
             p.setHealth(p.getAttribute(Attribute.MAX_HEALTH).getValue());
             p.setFoodLevel(20);

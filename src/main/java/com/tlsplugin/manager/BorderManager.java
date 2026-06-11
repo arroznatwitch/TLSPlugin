@@ -86,7 +86,7 @@ public class BorderManager implements Listener {
             World w = Bukkit.getWorld(targetWorldName);
             if (w != null) return w;
         }
-        return getTargetWorld();
+        return Bukkit.getWorlds().get(0);
     }
 
     public void setTargetWorld(World world) {
@@ -95,7 +95,7 @@ public class BorderManager implements Listener {
     }
 
     public String getTargetWorldName() {
-        return targetWorldName != null ? targetWorldName : getTargetWorld().getName();
+        return targetWorldName != null ? targetWorldName : Bukkit.getWorlds().get(0).getName();
     }
 
     /** Recarrega a lista de bordas do modo ativo — chamado após reloadConfig(). */
