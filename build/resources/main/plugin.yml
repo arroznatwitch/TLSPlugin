@@ -1,5 +1,5 @@
 name: tlsplugin
-version: "3.12.2"
+version: "3.12.3"
 main: com.tlsplugin.Tlsplugin
 api-version: "1.21"
 author: "ArrozNaTwitch"
@@ -60,4 +60,8 @@ commands:
   tlsconfig:
     description: Abre a GUI de configuração do plugin
     usage: /tlsconfig
+    permission: tls.admin
+  tlsworld:
+    description: Define o mundo onde o TLS opera
+    usage: /tlsworld [nomeMundo]
     permission: tls.admin

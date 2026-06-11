@@ -148,6 +148,7 @@ public class Tlsplugin extends JavaPlugin {
         });
         getCommand("pronto").setExecutor(prontoCommand);
         getCommand("anunciar").setExecutor(new AnunciarCommand(this));
+        getCommand("tlsworld").setExecutor(new WorldCommand(this));
         ConfigGui        configGui        = new ConfigGui(this);
         ConfigGuiListener configGuiListener = new ConfigGuiListener(this, configGui);
         Bukkit.getPluginManager().registerEvents(configGuiListener, this);

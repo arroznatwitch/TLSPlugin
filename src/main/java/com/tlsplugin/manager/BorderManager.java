@@ -24,6 +24,7 @@ public class BorderManager implements Listener {
 
     private final Tlsplugin plugin;
     private List<Double> stages;
+    private String targetWorldName = null;
     private int currentStageIndex = -1;
     private BukkitTask pauseTask;
     private BukkitTask alertTask;
@@ -80,6 +81,23 @@ public class BorderManager implements Listener {
         return plugin.getConfig().getString("modo_jogo", "final");
     }
 
+    public World getTargetWorld() {
+        if (targetWorldName != null) {
+            World w = Bukkit.getWorld(targetWorldName);
+            if (w != null) return w;
+        }
+        return getTargetWorld();
+    }
+
+    public void setTargetWorld(World world) {
+        this.targetWorldName = world.getName();
+        plugin.getLogger().info("[TLS] Mundo alvo: " + targetWorldName);
+    }
+
+    public String getTargetWorldName() {
+        return targetWorldName != null ? targetWorldName : getTargetWorld().getName();
+    }
+
     /** Recarrega a lista de bordas do modo ativo — chamado após reloadConfig(). */
     public void reloadStages() {
         List<Double> l = getModoConfig().getDoubleList("bordas");
@@ -115,7 +133,7 @@ public class BorderManager implements Listener {
             this.currentStageIndex    = yaml.getInt("currentStageIndex",      0);
             this.remainingShrinkSeconds = yaml.getInt("remainingShrinkSeconds", 0);
 
-            World w          = Bukkit.getWorlds().get(0);
+            World w          = getTargetWorld();
             double targetSize = stages.get(Math.min(currentStageIndex + 1, stages.size() - 1));
 
             if (!lastSafeExit) {
@@ -168,7 +186,7 @@ public class BorderManager implements Listener {
 
     public void setToInitial() {
         if (stages.isEmpty()) return;
-        World w     = Bukkit.getWorlds().get(0);
+        World w     = getTargetWorld();
         double size = stages.get(0);
         w.getWorldBorder().setCenter(0, 0);
         w.getWorldBorder().setSize(size);
@@ -218,7 +236,7 @@ public class BorderManager implements Listener {
         int shrinkSeconds  = getShrinkSeconds();
         int pauseSeconds   = getPauseSeconds();
 
-        World w = Bukkit.getWorlds().get(0);
+        World w = getTargetWorld();
         w.getWorldBorder().setCenter(0, 0);
         w.getWorldBorder().setSize(to, shrinkSeconds);
         this.remainingShrinkSeconds = shrinkSeconds;
@@ -303,7 +321,7 @@ public class BorderManager implements Listener {
 
     public void resetCurrentStage() {
         if (currentStageIndex < 0 || currentStageIndex >= stages.size()) return;
-        World w              = Bukkit.getWorlds().get(0);
+        World w              = getTargetWorld();
         double originalSize  = stages.get(currentStageIndex);
         int shrinkSeconds    = getShrinkSeconds();
         w.getWorldBorder().setSize(originalSize);
@@ -419,7 +437,7 @@ public class BorderManager implements Listener {
         bossBar.removeAll();
         bossBar.setVisible(false);
 
-        World w = Bukkit.getWorlds().get(0);
+        World w = getTargetWorld();
         w.getWorldBorder().setSize(30000000);
         w.getWorldBorder().setCenter(0, 0);
 
@@ -455,7 +473,7 @@ public class BorderManager implements Listener {
     public int getTotalStages()     { return stages.size(); }
 
     public double getCurrentBorderSize() {
-        return Bukkit.getWorlds().get(0).getWorldBorder().getSize();
+        return getTargetWorld().getWorldBorder().getSize();
     }
 
     public int getRemainingShrinkSeconds() { return remainingShrinkSeconds; }
