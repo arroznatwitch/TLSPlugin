@@ -13,12 +13,15 @@ import com.tlsplugin.utils.SpecialAppleRecipe;
 import dev.lone.itemsadder.api.Events.ItemsAdderLoadDataEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.World;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class Tlsplugin extends JavaPlugin {
@@ -114,13 +117,25 @@ public class Tlsplugin extends JavaPlugin {
             }
         }, this);
 
-        // OPs entram em Criativo no mundo "world"
+        // Aplica gamerules a todos os mundos carregados (inclui mundos do Multiverse)
+        for (World w : Bukkit.getWorlds()) applyGamerules(w);
         Bukkit.getPluginManager().registerEvents(new Listener() {
+            @EventHandler
+            public void onWorldLoad(WorldLoadEvent e) {
+                applyGamerules(e.getWorld());
+            }
+
+            // OPs entram em Criativo no mundo lobby (configurável)
             @EventHandler
             public void onWorldChange(PlayerChangedWorldEvent e) {
                 Player p = e.getPlayer();
-                if (p.isOp() && p.getWorld().getName().equals("world")) {
-                    p.setGameMode(GameMode.CREATIVE);
+                String lobby = getConfig().getString("mundo_lobby", "world");
+                if (p.isOp() && p.getWorld().getName().equals(lobby)) {
+                    Bukkit.getScheduler().runTaskLater(Tlsplugin.this, () -> {
+                        if (p.isOnline() && p.getWorld().getName().equals(lobby)) {
+                            p.setGameMode(GameMode.CREATIVE);
+                        }
+                    }, 2L);
                 }
             }
         }, this);
@@ -164,6 +179,8 @@ public class Tlsplugin extends JavaPlugin {
         SignManager signManager = new SignManager(this);
         getCommand("tlssign").setExecutor(new TlsSignCommand(this, signManager));
         Bukkit.getPluginManager().registerEvents(new com.tlsplugin.listeners.SignListener(this, signManager), this);
+        getCommand("tlsteams").setExecutor(new TeamsCommand(this));
+        Bukkit.getPluginManager().registerEvents(new com.tlsplugin.listeners.TeamWoolListener(this), this);
         ConfigGui        configGui        = new ConfigGui(this);
         ConfigGuiListener configGuiListener = new ConfigGuiListener(this, configGui);
         Bukkit.getPluginManager().registerEvents(configGuiListener, this);
@@ -192,6 +209,25 @@ public class Tlsplugin extends JavaPlugin {
         reloadConfig();
         CraftBookGui.loadConfig(getDataFolder());
         if (borderManager != null) borderManager.reloadStages();
+        for (World w : Bukkit.getWorlds()) applyGamerules(w);
+    }
+
+    public boolean isSoloMode() {
+        return getConfig().getString("tipo_jogo", "equipas").equalsIgnoreCase("solo");
+    }
+
+    public boolean isLobbyWorld(org.bukkit.World world) {
+        if (world == null) return false;
+        return world.getName().equalsIgnoreCase(getConfig().getString("mundo_lobby", "world"));
+    }
+
+    public void applyGamerules(World world) {
+        ConfigurationSection rules = getConfig().getConfigurationSection("game.gamerules");
+        if (rules == null) return;
+        for (String key : rules.getKeys(false)) {
+            String value = String.valueOf(rules.get(key));
+            world.setGameRuleValue(key, value);
+        }
     }
 
     @Override

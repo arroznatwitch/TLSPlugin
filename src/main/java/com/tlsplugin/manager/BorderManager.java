@@ -86,16 +86,22 @@ public class BorderManager implements Listener {
             World w = Bukkit.getWorld(targetWorldName);
             if (w != null) return w;
         }
+        // Fallback: primeiro mundo que NÃO seja o lobby
+        String lobby = plugin.getConfig().getString("mundo_lobby", "world");
+        for (World w : Bukkit.getWorlds()) {
+            if (!w.getName().equalsIgnoreCase(lobby)) return w;
+        }
         return Bukkit.getWorlds().get(0);
     }
 
     public void setTargetWorld(World world) {
         this.targetWorldName = world.getName();
         plugin.getLogger().info("[TLS] Mundo alvo: " + targetWorldName);
+        saveState();
     }
 
     public String getTargetWorldName() {
-        return targetWorldName != null ? targetWorldName : Bukkit.getWorlds().get(0).getName();
+        return getTargetWorld().getName();
     }
 
     /** Recarrega a lista de bordas do modo ativo — chamado após reloadConfig(). */
@@ -116,6 +122,7 @@ public class BorderManager implements Listener {
         yaml.set("currentStageIndex",      currentStageIndex);
         yaml.set("remainingShrinkSeconds", remainingShrinkSeconds);
         yaml.set("lastSafeExit",           false);
+        if (targetWorldName != null) yaml.set("targetWorldName", targetWorldName);
         try { yaml.save(file); } catch (IOException e) { e.printStackTrace(); }
     }
 
@@ -127,6 +134,10 @@ public class BorderManager implements Listener {
         boolean wasRunning        = yaml.getBoolean("running",       false);
         boolean wasPaused         = yaml.getBoolean("paused",        false);
         boolean lastSafeExit      = yaml.getBoolean("lastSafeExit",  true);
+
+        if (yaml.contains("targetWorldName")) {
+            this.targetWorldName = yaml.getString("targetWorldName");
+        }
 
         if (wasRunning) {
             this.running              = true;

@@ -66,24 +66,47 @@ public class DeathListener implements Listener {
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player p = event.getEntity();
+        if (plugin.isLobbyWorld(p.getWorld())) return;
         Location deathLoc = p.getLocation().getBlock().getLocation();
 
         // Suprimir mensagem vanilla
         event.setDeathMessage(null);
 
-        // 1. Mensagem de morte — SEMPRE, independente do revive
+        boolean soloMode    = plugin.isSoloMode();
+        boolean reviveOn    = plugin.getConfig().getBoolean("revive.habilitar", false);
+        boolean usarRevive  = !soloMode && reviveOn;
+
+        // 1. Mensagem de morte
         if (plugin.getConfig().getBoolean("mensagens_revive.anunciar_morte_chat", true)) {
-            int timeLimit = plugin.getConfig().getInt("revive.tempo_limite_revive_segundos", 300);
-            for (Player online : Bukkit.getOnlinePlayers()) {
-                String msg = plugin.getConfig()
+            String msg;
+            if (usarRevive) {
+                int timeLimit = plugin.getConfig().getInt("revive.tempo_limite_revive_segundos", 300);
+                msg = plugin.getConfig()
                         .getString("mensagens_revive.morte_anuncio_chat", "§c💀 {player} morreu!")
                         .replace("{player}", p.getName())
                         .replace("{tempo_limite}", String.valueOf(TimeUnit.SECONDS.toMinutes(timeLimit)))
                         .replace("{bloco_marcador}", "X/Z " + deathLoc.getBlockX() + "/" + deathLoc.getBlockZ());
-                online.sendMessage(msg);
+            } else {
+                Player killer = p.getKiller();
+                if (killer != null) {
+                    msg = plugin.getConfig()
+                            .getString("mensagens_revive.morte_anuncio_chat_simples",
+                                    "§f[§bTLS§f] §c💀 §f§l{player} §efoi morto por §f§l{killer}§e!")
+                            .replace("{player}", p.getName())
+                            .replace("{killer}", killer.getName());
+                } else {
+                    msg = plugin.getConfig()
+                            .getString("mensagens_revive.morte_anuncio_chat_simples_sem_killer",
+                                    "§f[§bTLS§f] §c💀 §f§l{player} §emorreu!")
+                            .replace("{player}", p.getName());
+                }
             }
-            String title    = plugin.getConfig().getString("mensagens_revive.morte_anuncio_title",    "MORTE");
-            String subtitle = plugin.getConfig().getString("mensagens_revive.morte_anuncio_subtitle", "Aguarde reanimação!");
+            for (Player online : Bukkit.getOnlinePlayers()) online.sendMessage(msg);
+
+            String title    = plugin.getConfig().getString("mensagens_revive.morte_anuncio_title",    "§c§l💀 MORTE");
+            String subtitle = usarRevive
+                    ? plugin.getConfig().getString("mensagens_revive.morte_anuncio_subtitle", "§7Aguarde reanimação!")
+                    : "";
             p.sendTitle(title, subtitle, 10, 70, 20);
         }
 
@@ -98,9 +121,8 @@ public class DeathListener implements Listener {
             }, 1L);
         }
 
-        // 3. Sistema de Revive (Corpo/Holograma)
-        if (!plugin.getConfig().getBoolean("revive.habilitar", true) ||
-                !plugin.getConfig().getBoolean("revive.habilitar_corpo_revive", true)) {
+        // 3. Sistema de Revive (Corpo/Holograma) — apenas em modo equipas com revive ativo
+        if (!usarRevive || !plugin.getConfig().getBoolean("revive.habilitar_corpo_revive", false)) {
             return;
         }
 
@@ -203,7 +225,8 @@ public class DeathListener implements Listener {
             return;
         }
 
-        boolean restringir_equipa = plugin.getConfig().getBoolean("spectator.restringir_mesma_equipa", true);
+        boolean restringir_equipa = !plugin.isSoloMode()
+                && plugin.getConfig().getBoolean("spectator.restringir_mesma_equipa", true);
         if (restringir_equipa && p.getSpectatorTarget() instanceof Player target) {
             Team pt = p.getScoreboard().getEntryTeam(p.getName());
             Team tt = target.getScoreboard().getEntryTeam(target.getName());

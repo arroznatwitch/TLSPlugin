@@ -1,14 +1,17 @@
 package com.tlsplugin.manager;
 
+import com.tlsplugin.Tlsplugin;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
@@ -106,10 +109,14 @@ public class GameFreezeManager implements Listener {
     // ==========================================================
     //                       PAUSAR  (/pause)
     // ==========================================================
+    private World getEventWorld() {
+        return Tlsplugin.getInstance().getBorderManager().getTargetWorld();
+    }
+
     public void freezeAll() {
         frozen = true;
 
-        for (Entity e : Bukkit.getWorlds().get(0).getEntities()) {
+        for (Entity e : getEventWorld().getEntities()) {
             if (e instanceof LivingEntity mob && !(e instanceof Player)) {
                 mob.setAI(false); frozenMobs.add(mob);
             }
@@ -166,7 +173,7 @@ public class GameFreezeManager implements Listener {
     // ==========================================================
     public void freezeForStart() {
         frozen = true;
-        for (Entity e : Bukkit.getWorlds().get(0).getEntities()) {
+        for (Entity e : getEventWorld().getEntities()) {
             if (e instanceof LivingEntity mob && !(e instanceof Player)) {
                 mob.setAI(false); frozenMobs.add(mob);
             }
@@ -321,7 +328,12 @@ public class GameFreezeManager implements Listener {
     @EventHandler public void onInteract(PlayerInteractEvent e) { if (frozen && !e.getPlayer().isOp()) e.setCancelled(true); }
     @EventHandler public void onDrop(PlayerDropItemEvent e)     { if (frozen && !e.getPlayer().isOp()) e.setCancelled(true); }
     @EventHandler public void onInv(InventoryClickEvent e)      { if (frozen && e.getWhoClicked() instanceof Player p && !p.isOp()) e.setCancelled(true); }
-    @EventHandler public void onHit(EntityDamageEvent e)        { if (frozen) e.setCancelled(true); }
+    @EventHandler public void onHit(EntityDamageEvent e) {
+        if (!frozen) return;
+        // OPs podem bater livremente mesmo durante freeze
+        if (e instanceof EntityDamageByEntityEvent ede && ede.getDamager() instanceof Player p && p.isOp()) return;
+        e.setCancelled(true);
+    }
     @EventHandler public void onTarget(EntityTargetEvent e)     { if (frozen) e.setCancelled(true); }
     @EventHandler public void onProj(ProjectileLaunchEvent e)   { if (frozen) e.setCancelled(true); }
 }

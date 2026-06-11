@@ -1,9 +1,10 @@
 name: tlsplugin
-version: "3.12.4"
+version: "3.12.5"
 main: com.tlsplugin.Tlsplugin
 api-version: "1.21"
 author: "ArrozNaTwitch"
 depend: [ ItemsAdder, ProtocolLib ]
+softdepend: [ LuckPerms ]
 commands:
   setborda:
     description: "Define a borda inicial para o valor configurado (ex: 10000)."
@@ -75,4 +76,8 @@ commands:
   tlssign:
     description: Gestão de placas interativas com permissão
     usage: /tlssign <set|remove|list|info> [args]
+    permission: tls.admin
+  tlsteams:
+    description: Dá os 8 blocos de lã para escolha de equipa
+    usage: /tlsteams
     permission: tls.admin

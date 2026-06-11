@@ -43,20 +43,22 @@ public class SpectatorInspectListener implements Listener {
 
         // Regra Especial para Espectadores (não-admins)
         if (!spectator.isOp()) {
-            // Se habilitado esconder quadrados na barra de XP (que aqui interpretamos como o espectador espiar)
-            if (com.tlsplugin.Tlsplugin.getInstance().getConfig().getBoolean("game.esconder_quadrados_xp", true)) {
-                e.setCancelled(true);
-                spectator.sendMessage("§cVocê não pode espiar outros jogadores enquanto o jogo está a decorrer!");
-                return;
-            }
 
-            // Verifica times
+            // Em modo solo não há restrições de equipa
+            if (plugin.isSoloMode()) return;
+
+            // Modo equipas: só pode espiar a própria equipa
+            boolean restringir = plugin.getConfig().getBoolean("spectator.restringir_mesma_equipa", true);
+            if (!restringir) return;
+
             Team teamSpectator = spectator.getScoreboard().getEntryTeam(spectator.getName());
-            Team teamTarget = target.getScoreboard().getEntryTeam(target.getName());
+            Team teamTarget    = target.getScoreboard().getEntryTeam(target.getName());
 
             if (teamSpectator == null || teamTarget == null || !teamSpectator.equals(teamTarget)) {
                 e.setCancelled(true);
-                spectator.sendMessage("§cVocê só pode teleportar para membros da sua própria equipe!");
+                spectator.sendMessage(plugin.getConfig().getString(
+                        "spectator.mensagem_equipa_errada",
+                        "§cNão podes espiar jogadores de outras equipas."));
             }
         }
     }

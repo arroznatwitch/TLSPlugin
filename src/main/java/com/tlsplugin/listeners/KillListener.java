@@ -32,6 +32,7 @@ public class KillListener implements Listener {
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent e) {
         Player victim = e.getEntity();
+        if (plugin.isLobbyWorld(victim.getWorld())) return;
         Player killer = victim.getKiller();
 
         // 1. Morte da vítima

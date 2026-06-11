@@ -23,6 +23,8 @@ public class ConfigGui {
     private static final Map<String, String>   DISPLAY_NAMES = new HashMap<>();
 
     static {
+        ICONS.put("tipo_jogo",             Material.SHIELD);
+        ICONS.put("mundo_lobby",           Material.GRASS_BLOCK);
         ICONS.put("modo_jogo",             Material.COMPASS);
         ICONS.put("modos",                 Material.BOOK);
         ICONS.put("mensagens",             Material.PAPER);
@@ -66,7 +68,9 @@ public class ConfigGui {
     }
 
     static {
-        DISPLAY_NAMES.put("modo_jogo",              "Modo de Jogo");
+        DISPLAY_NAMES.put("tipo_jogo",               "Tipo de Jogo (equipas/solo)");
+        DISPLAY_NAMES.put("mundo_lobby",             "Mundo do Lobby");
+        DISPLAY_NAMES.put("modo_jogo",               "Modo de Jogo");
         DISPLAY_NAMES.put("modos",                  "Configuração dos Modos");
         DISPLAY_NAMES.put("mensagens",              "Mensagens");
         DISPLAY_NAMES.put("bossbar_template",       "Template da BossBar");

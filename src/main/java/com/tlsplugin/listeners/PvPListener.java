@@ -89,6 +89,7 @@ public class PvPListener implements Listener {
         Player p = (Player) e.getEntity();
         double amount = e.getFinalDamage();
 
+        if (plugin.isLobbyWorld(p.getWorld())) return;
         if (freezeManager.isFrozen()) return;
         if (e.isCancelled()) return;
 
@@ -124,9 +125,9 @@ public class PvPListener implements Listener {
     @EventHandler
     public void onPlayerHeal(EntityRegainHealthEvent e) {
         if (!(e.getEntity() instanceof Player)) return;
-        if (freezeManager.isFrozen()) return;
-
         Player p = (Player) e.getEntity();
+        if (plugin.isLobbyWorld(p.getWorld())) return;
+        if (freezeManager.isFrozen()) return;
         double amount = e.getAmount();
         int dec = plugin.getConfig().getInt("pvp_decimais", 1);
         String formatted = format(amount, dec);

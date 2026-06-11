@@ -8,13 +8,14 @@ def paperApiVersion = project.hasProperty('paperApiVersion') ? project.getProper
 def runMinecraftVersion = project.hasProperty('runMinecraftVersion') ? project.getProperty('runMinecraftVersion') : '26.1.2'
 
 group = 'com'
-version = '3.12.4'
+version = '3.12.6'
 
 repositories {
     // Repositórios principais
     mavenCentral()
     maven { url "https://repo.papermc.io/repository/maven-public/" }
     maven { url "https://jitpack.io" }
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
 
     // Mantemos o repositório do ItemsAdder (caso atualizem no futuro)
     maven {
@@ -33,6 +34,10 @@ dependencies {
 
     // ProtocolLib local
     compileOnly files("libs/ProtocolLib.jar")
+
+    // LuckPerms API — coloca o JAR em libs/luckperms-api-5.4.jar
+    // Download: https://github.com/LuckPerms/LuckPerms/releases
+    compileOnly 'net.luckperms:api:5.4'
 }
 
 tasks {

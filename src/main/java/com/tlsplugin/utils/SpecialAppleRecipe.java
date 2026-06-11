@@ -22,6 +22,7 @@ import dev.lone.itemsadder.api.Events.ItemsAdderLoadDataEvent;
 public class SpecialAppleRecipe implements Listener {
 
     private static JavaPlugin plugin;
+    private static boolean listenerRegistered = false;
     private static final Material CUSTOM_ITEM_BASE_MATERIAL = Material.GOLDEN_APPLE;
     private static final String CUSTOM_ITEM_ID = "tls_plugin:tls_special_apple";
 
@@ -32,9 +33,11 @@ public class SpecialAppleRecipe implements Listener {
     public static void register(JavaPlugin pl) {
         plugin = pl;
 
-        Bukkit.getPluginManager().registerEvents(new SpecialAppleRecipe(plugin), plugin);
+        if (!listenerRegistered) {
+            Bukkit.getPluginManager().registerEvents(new SpecialAppleRecipe(plugin), plugin);
+            listenerRegistered = true;
+        }
 
-        // Regista receita (só se o ItemsAdder já carregou; o evento abaixo trata do reload)
         registerRecipe();
     }
 

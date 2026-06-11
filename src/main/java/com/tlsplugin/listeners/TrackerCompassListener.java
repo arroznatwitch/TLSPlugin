@@ -120,7 +120,9 @@ public class TrackerCompassListener implements Listener {
         }
 
         startTracking(p);
-        p.sendMessage(msgUsar);
+        Player alvoInicial = findNearestTarget(p);
+        String nomeAlvo = alvoInicial != null ? alvoInicial.getName() : "?";
+        p.sendMessage(msgUsar.replace("{alvo}", nomeAlvo));
 
         if (!(opInfinito && p.isOp())) {
             cooldowns.put(id, now + (cooldownSegundos * 1000L));

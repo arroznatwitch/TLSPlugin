@@ -1,0 +1,12 @@
+﻿.\gradlew.bat : Error: Could not find or load main class org.gradle.wrapper.GradleWrapperMain
+At line:1 char:52
++ ... tlsplugin"; .\gradlew.bat compileJava --no-daemon --console=plain 2>& ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Error: Could no...adleWrapperMain:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Caused by: java.lang.ClassNotFoundException: org.gradle.wrapper.GradleWrapperMain
+
+Build failed with error code 1.
+
+Press any key to continue . . .

@@ -47,6 +47,7 @@ public class ProximityAlertListener {
 
         Player[] jogadores = Bukkit.getOnlinePlayers().stream()
                 .filter(p -> !p.isOp())
+                .filter(p -> !plugin.isLobbyWorld(p.getWorld()))
                 .filter(p -> p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE)
                 .toArray(Player[]::new);
 

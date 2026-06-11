@@ -1,10 +1,19 @@
 # TLSPlugin - configuração em PT-PT
 
+# --- Tipo de Jogo ---
+# "equipas" → sistema de revive, spawns por equipa, spectator restringido
+# "solo"    → sem revive, sem equipas, mensagem de morte simples
+tipo_jogo: "solo"
+
+# --- Mundo do Lobby ---
+# Mundo onde os OPs entram automaticamente em Criativo
+mundo_lobby: "world"
+
 # --- Modo de Jogo ---
 # Define qual o perfil de bordas ativo: "final" ou "teste"
 # "final" → 10 fases, 12 minutos por fase (jogo oficial)
 # "teste"  → 7 fases,  10 minutos por fase (para testar)
-modo_jogo: "teste"
+modo_jogo: "final"
 
 modos:
   final:
@@ -32,7 +41,7 @@ modos:
       - 500.0
       - 50.0
     tempo_shrink_segundos: 600
-    tempo_pausa_segundos: 30
+    tempo_pausa_segundos: 15
 
 # Mensagens no chat (PT-PT). Usa {stage}, {total}, {coord}, {time} como placeholders.
 mensagens:
@@ -123,17 +132,19 @@ revive:
 
 # --- Configurações do Jogo ---
 game:
-  # Gamerules que serão forçadas ao iniciar o jogo
+  # Gamerules aplicadas a TODOS os mundos carregados (incluindo mundos do Multiverse)
   gamerules:
     announceAdvancements: false
     showDeathMessages: false
     doImmediateRespawn: true
     locator_bar: false
+    doDaylightCycle: false
+    doWeatherCycle: false
 
 
 
   # Outras opções
-  modo-desenvolvedor: true
+  modo-desenvolvedor: false
 
   # Item do Livro de Receitas (ItemsAdder ID) — entregue ao início do jogo
   craft_book_item: "tls_plugin:craft_book"
@@ -238,8 +249,12 @@ mensagens_revive:
   compass_alvo_nao_encontrado: "§c✖ Nenhum alvo encontrado"
 
   # --- Mensagens de morte ---
+  # Modo equipas com revive ativo:
   morte_anuncio_chat: "§f[§bTLS§f] §c💀 §f§l{player} §efoi morto! O seu corpo em §f§l{bloco_marcador} §edeve ser reanimado em §f§l{tempo_limite}."
-  morte_anuncio_title: "§f[§bTLS§f] §c§l💀 MORTE"
+  # Modo solo ou revive desativado:
+  morte_anuncio_chat_simples: "§f[§bTLS§f] §c💀 §f§l{player} §efoi morto por §f§l{killer}§e!"
+  morte_anuncio_chat_simples_sem_killer: "§f[§bTLS§f] §c💀 §f§l{player} §emorreu!"
+  morte_anuncio_title: "§c§l💀 MORTE"
   morte_anuncio_subtitle: "§7Aguarde reanimação!"
 
   # --- Sucesso ---
@@ -426,9 +441,9 @@ anunciar:
 # --- Alerta de Proximidade de Fight ---
 proximidade_fight:
   # Raio em blocos para detectar dois jogadores próximos
-  raio_blocos: 30
+  raio_blocos: 45
   # Cooldown em segundos entre alertas do mesmo par de jogadores
-  cooldown_segundos: 30
+  cooldown_segundos: 5
   # Mensagem enviada aos OPs (suporta {a}, {b}, {dist})
   mensagem: "§f[§bTLS§f] §e⚔ §f{a} §ee §f{b} §eestão a §f{dist} blocos§e um do outro!"
   # Texto do botão clicável de teleporte
@@ -462,6 +477,78 @@ border_announcer:
   cor_futura: "§f"
   seta_atual: "▶ "
   prefixo_futuro: "  "
+
+# --- Blocos de Equipa ---
+teams:
+  remover_outras_equipas: true
+  mensagem_equipa: "§f[§bTLS§f] §aJuntaste-te à equipa §b{equipa}§a!"
+  mensagem_ja_na_equipa: "§f[§bTLS§f] §eJá fazes parte da equipa §b{equipa}§e."
+  mensagem_sem_luckperms: "§f[§bTLS§f] §cLuckPerms não encontrado."
+  items:
+    blue:
+      display_name: "§9§lEquipa Azul"
+      lore:
+        - "§7Clica com o botão direito"
+        - "§7para te juntares à equipa §9Azul§7."
+        - ""
+        - "§8Cargo LuckPerms§8: §9blue"
+      group: "blue"
+    grey:
+      display_name: "§7§lEquipa Cinzenta"
+      lore:
+        - "§7Clica com o botão direito"
+        - "§7para te juntares à equipa §7Cinzenta§7."
+        - ""
+        - "§8Cargo LuckPerms§8: §7grey"
+      group: "grey"
+    green:
+      display_name: "§a§lEquipa Verde"
+      lore:
+        - "§7Clica com o botão direito"
+        - "§7para te juntares à equipa §aVerde§7."
+        - ""
+        - "§8Cargo LuckPerms§8: §agreen"
+      group: "green"
+    orange:
+      display_name: "§6§lEquipa Laranja"
+      lore:
+        - "§7Clica com o botão direito"
+        - "§7para te juntares à equipa §6Laranja§7."
+        - ""
+        - "§8Cargo LuckPerms§8: §6orange"
+      group: "orange"
+    pink:
+      display_name: "§d§lEquipa Rosa"
+      lore:
+        - "§7Clica com o botão direito"
+        - "§7para te juntares à equipa §dRosa§7."
+        - ""
+        - "§8Cargo LuckPerms§8: §dpink"
+      group: "pink"
+    purple:
+      display_name: "§5§lEquipa Roxa"
+      lore:
+        - "§7Clica com o botão direito"
+        - "§7para te juntares à equipa §5Roxa§7."
+        - ""
+        - "§8Cargo LuckPerms§8: §5purple"
+      group: "purple"
+    red:
+      display_name: "§c§lEquipa Vermelha"
+      lore:
+        - "§7Clica com o botão direito"
+        - "§7para te juntares à equipa §cVermelha§7."
+        - ""
+        - "§8Cargo LuckPerms§8: §cred"
+      group: "red"
+    yellow:
+      display_name: "§e§lEquipa Amarela"
+      lore:
+        - "§7Clica com o botão direito"
+        - "§7para te juntares à equipa §eAmarela§7."
+        - ""
+        - "§8Cargo LuckPerms§8: §eyellow"
+      group: "yellow"
 
 # --- Spectator ---
 spectator:

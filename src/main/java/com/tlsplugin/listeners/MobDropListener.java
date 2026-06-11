@@ -23,6 +23,7 @@ public class MobDropListener implements Listener {
         Entity entity = event.getEntity();
 
         if (!plugin.getConfig().getBoolean("mob_gold_drop.habilitar", true)) return;
+        if (plugin.isLobbyWorld(entity.getWorld())) return;
 
         World.Environment env = entity.getWorld().getEnvironment();
         if (env == World.Environment.NETHER || env == World.Environment.THE_END) return;
