@@ -1,6 +1,7 @@
 package com.tlsplugin.manager;
 
 import com.tlsplugin.Tlsplugin;
+import dev.lone.itemsadder.api.FontImages.FontImageWrapper;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -35,6 +36,16 @@ public class BorderScoreboardManager {
         }, 0L, 20L);
     }
 
+    private String getLogoChar() {
+        try {
+            FontImageWrapper wrapper = FontImageWrapper.instance("tls_plugin:logo");
+            if (wrapper != null) {
+                return wrapper.getString();
+            }
+        } catch (Exception ignored) {}
+        return "";
+    }
+
     public void create(Player p) {
         Scoreboard sb = Bukkit.getScoreboardManager().getNewScoreboard();
 
@@ -59,7 +70,7 @@ public class BorderScoreboardManager {
 
         FileConfiguration cfg = plugin.getConfig();
 
-        String titulo = processUnicode(
+        String titulo = getLogoChar() + processUnicode(
                 cfg.getString("scoreboard.titulo", "§b§lTLS - III")
         );
 
@@ -97,7 +108,7 @@ public class BorderScoreboardManager {
 
         FileConfiguration cfg = plugin.getConfig();
 
-        String titulo = processUnicode(
+        String titulo = getLogoChar() + processUnicode(
                 cfg.getString("scoreboard.titulo", "§b§lTLS - III")
         );
 
@@ -135,7 +146,7 @@ public class BorderScoreboardManager {
 
         int line = 20;
 
-        // Título atualizado com Unicode processado
+        // Título atualizado com logo + Unicode processado
         obj.setDisplayName(titulo);
 
         // Fase

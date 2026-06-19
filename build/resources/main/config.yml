@@ -222,8 +222,8 @@ mvp_pontos:
   morte: -6
   revive: 5
   tempo_vivo:
-    pontos: 2
-    cada_minutos: 5
+    pontos: 1
+    cada_minutos: 1
   ddrd:
     excelente_limiar: 21
     excelente_pontos: 6
