@@ -3,7 +3,7 @@ version: "3.13.1"
 main: com.tlsplugin.Tlsplugin
 api-version: "1.21"
 author: "ArrozNaTwitch"
-depend: [ ItemsAdder, ProtocolLib ]
+depend: [ ItemsAdder, ProtocolLib, packetevents ]
 softdepend: [ LuckPerms ]
 commands:
   setborda:

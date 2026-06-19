@@ -38,6 +38,12 @@ dependencies {
     // LuckPerms API — coloca o JAR em libs/luckperms-api-5.4.jar
     // Download: https://github.com/LuckPerms/LuckPerms/releases
     compileOnly 'net.luckperms:api:5.4'
+
+    // PacketEvents — scoreboard 100% client-side (anti-flicker).
+    // Plugin externo do servidor (depend no plugin.yml) → compileOnly, NÃO é
+    // compilado/embutido na jar. JAR local em libs/ (igual ao ItemsAdder/ProtocolLib).
+    // Em runtime, instala o PacketEvents.jar na pasta plugins/ do servidor.
+    compileOnly files("libs/packetevents-spigot-2.12.2.jar")
 }
 
 tasks {

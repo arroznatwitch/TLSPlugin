@@ -62,7 +62,7 @@ public class Tlsplugin extends JavaPlugin {
         this.borderManager           = new BorderManager(this);
         this.borderTimerAnnouncer    = new BorderTimerAnnouncer(this, borderManager);
         this.borderScoreboardManager = new BorderScoreboardManager(this, borderManager);
-        this.borderScoreboardListener = new BorderScoreboardListener(borderScoreboardManager);
+        this.borderScoreboardListener = new BorderScoreboardListener(this, borderScoreboardManager);
         this.mvpStatsManager         = new MVPStatsManager();
         this.mvpStatsManager.loadStats();
         this.pauseManager            = new PlayerPauseManager();
@@ -141,9 +141,10 @@ public class Tlsplugin extends JavaPlugin {
             }
         }, this);
 
-        // Jogadores já online (reload)
+        // Jogadores já online (reload). A sidebar é (re)criada pelo updater do
+        // BorderScoreboardManager no próximo tick (auto-cura), quando os canais
+        // de rede já estão prontos — por isso não chamamos create() aqui.
         for (Player p : Bukkit.getOnlinePlayers()) {
-            borderScoreboardManager.create(p);
             mvpStatsManager.registerPlayer(p.getName());
             goldPotionListener.applyBaseLore(p);
         }
@@ -234,6 +235,7 @@ public class Tlsplugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (borderScoreboardManager != null) borderScoreboardManager.shutdown();
         if (borderManager != null) {
             borderManager.saveState();
             borderManager.markSafeExit();

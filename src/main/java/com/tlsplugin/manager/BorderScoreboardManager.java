@@ -1,44 +1,76 @@
 package com.tlsplugin.manager;
 
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.protocol.score.ScoreFormat;
+import com.github.retrooper.packetevents.wrapper.PacketWrapper;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerDisplayScoreboard;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerScoreboardObjective;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerScoreboardObjective.ObjectiveMode;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerScoreboardObjective.RenderType;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerUpdateScore;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerUpdateScore.Action;
 import com.tlsplugin.Tlsplugin;
 import dev.lone.itemsadder.api.FontImages.FontImageWrapper;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.scoreboard.DisplaySlot;
-import org.bukkit.scoreboard.Objective;
-import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.Team;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Scoreboard (sidebar) 100% client-side, enviada via pacotes do PacketEvents.
+ *
+ * <p>Ao contrário da abordagem antiga ({@code player.setScoreboard(...)}), esta
+ * implementação NUNCA substitui a scoreboard do servidor do jogador. Isso significa
+ * que as teams da scoreboard principal (cores de nametag, prefixos de equipa, etc.,
+ * geridas por outras partes do plugin) continuam intactas — só enviamos a sidebar
+ * por cima, diretamente ao cliente.</p>
+ *
+ * <p>Anti-flicker: a sidebar é criada uma única vez e cada atualização envia apenas
+ * as linhas que mudaram (diff). Nunca removemos + readicionamos a mesma linha, que é
+ * a causa clássica do flicker. Os números vermelhos à direita são escondidos com
+ * {@link ScoreFormat#blankScore()} (disponível em 1.20.3+).</p>
+ */
 public class BorderScoreboardManager {
 
-    private final Tlsplugin plugin;
-    private final BorderManager borderManager;
-    private final Map<UUID, Scoreboard> boards = new HashMap<>();
-
-    // Jogadores que têm a scoreboard ESCONDIDA (toggle off)
-    private final Set<UUID> hidden = new HashSet<>();
-
-    // Número de linhas máximo da scoreboard
+    private static final String OBJECTIVE = "tls_border";
+    private static final int SIDEBAR_SLOT = 1; // 0 = tab list, 1 = sidebar, 2 = below name
     private static final int MAX_LINES = 20;
 
-    // Entradas dummy únicas por linha (invisíveis ao jogador)
+    /** Chaves (score holders) únicas e invisíveis por linha. Não são renderizadas
+     *  porque enviamos sempre um display name por linha (1.20.3+). */
     private static final String[] ENTRIES;
     static {
         ENTRIES = new String[MAX_LINES];
+        String alpha = "0123456789abcdefghij"; // 20 caracteres únicos
         for (int i = 0; i < MAX_LINES; i++) {
-            // §0, §1, §2... §9, §a, §b... combinações únicas
-            ENTRIES[i] = "§" + Integer.toHexString(i);
+            ENTRIES[i] = "§" + alpha.charAt(i);
         }
     }
+
+    private final Tlsplugin plugin;
+    private final BorderManager borderManager;
+
+    // Estado por jogador
+    private final Set<UUID> created = new HashSet<>();              // sidebar já criada no cliente
+    private final Set<UUID> hidden = new HashSet<>();               // toggle off
+    private final Map<UUID, List<String>> lastLines = new HashMap<>();
+    private final Map<UUID, String> lastTitle = new HashMap<>();
+
+    private BukkitTask updaterTask;
 
     public BorderScoreboardManager(Tlsplugin plugin, BorderManager borderManager) {
         this.plugin = plugin;
@@ -56,8 +88,7 @@ public class BorderScoreboardManager {
             return true; // agora visível
         } else {
             hidden.add(id);
-            p.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
-            boards.remove(id);
+            hideBoard(p);
             return false; // agora escondida
         }
     }
@@ -69,83 +100,133 @@ public class BorderScoreboardManager {
     // ── Updater ───────────────────────────────────────────────────────────────
 
     private void startUpdater() {
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+        updaterTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player p : Bukkit.getOnlinePlayers()) {
-                if (!hidden.contains(p.getUniqueId())) {
+                UUID id = p.getUniqueId();
+                if (hidden.contains(id)) continue;
+                if (created.contains(id)) {
                     updateBoard(p);
+                } else {
+                    // Auto-cura: tenta (re)criar a sidebar até conseguir.
+                    // Cobre o reload com jogadores online e qualquer CREATE perdido.
+                    create(p);
                 }
             }
         }, 0L, 20L);
     }
 
-    // ── Create ────────────────────────────────────────────────────────────────
+    // ── Ciclo de vida da sidebar ──────────────────────────────────────────────
 
+    /** Cria (ou recria) a sidebar no cliente e repinta todas as linhas. */
     public void create(Player p) {
-        Scoreboard sb = Bukkit.getScoreboardManager().getNewScoreboard();
-
-        // Sincronizar teams da scoreboard principal (nomes de equipa, cores, etc.)
-        for (Team t : Bukkit.getScoreboardManager().getMainScoreboard().getTeams()) {
-            Team nt = sb.registerNewTeam(t.getName());
-            nt.setPrefix(t.getPrefix());
-            nt.setSuffix(t.getSuffix());
-            nt.setColor(t.getColor());
-            for (Team.Option option : Team.Option.values()) {
-                try { nt.setOption(option, t.getOption(option)); } catch (Exception ignored) {}
-            }
-            for (String entry : t.getEntries()) {
-                nt.addEntry(entry);
-            }
+        if (!p.isOnline()) return;          // evita estado órfão se o jogador já saiu
+        UUID id = p.getUniqueId();
+        if (hidden.contains(id)) return;
+        if (created.contains(id)) {         // já existe — não reenvia CREATE, só atualiza
+            updateBoard(p);
+            return;
         }
 
-        // Criar teams de linha (sb_line_0, sb_line_1, ...) para editar texto sem recriar entries
-        for (int i = 0; i < MAX_LINES; i++) {
-            Team lineTeam = sb.registerNewTeam("sb_line_" + i);
-            lineTeam.addEntry(ENTRIES[i]);
+        String title = title();
+        // Só marca como criada se o CREATE foi mesmo enviado; caso contrário o
+        // updater volta a tentar no próximo tick (auto-cura, sem desync silencioso).
+        if (!send(p, new WrapperPlayServerScoreboardObjective(
+                OBJECTIVE, ObjectiveMode.CREATE, toComponent(title), RenderType.INTEGER, ScoreFormat.blankScore()))) {
+            return;
         }
+        send(p, new WrapperPlayServerDisplayScoreboard(SIDEBAR_SLOT, OBJECTIVE));
 
-        FileConfiguration cfg = plugin.getConfig();
-        String titulo = getLogoChar() + processUnicode(cfg.getString("scoreboard.titulo", "§b§lTLS - III"));
-
-        Objective obj = sb.registerNewObjective("border", "dummy", titulo);
-        obj.setDisplaySlot(DisplaySlot.SIDEBAR);
-
-        boards.put(p.getUniqueId(), sb);
-        p.setScoreboard(sb);
+        created.add(id);
+        lastTitle.put(id, title);
+        lastLines.remove(id); // força repintura completa
+        updateBoard(p);
     }
 
+    /** Remove a sidebar do cliente (toggle off) sem mexer no estado de {@code hidden}. */
+    private void hideBoard(Player p) {
+        send(p, new WrapperPlayServerScoreboardObjective(
+                OBJECTIVE, ObjectiveMode.REMOVE, Component.empty(), null));
+        clearState(p.getUniqueId());
+    }
+
+    /** Limpeza ao sair do servidor. */
     public void remove(Player p) {
-        boards.remove(p.getUniqueId());
+        clearState(p.getUniqueId());
         hidden.remove(p.getUniqueId());
-        p.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
     }
 
-    // ── Update (sem recriar entries — sem flicker) ────────────────────────────
+    private void clearState(UUID id) {
+        created.remove(id);
+        lastLines.remove(id);
+        lastTitle.remove(id);
+    }
+
+    /** Cancela o updater e remove a sidebar de todos (chamado no onDisable). */
+    public void shutdown() {
+        if (updaterTask != null) updaterTask.cancel();
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (created.contains(p.getUniqueId())) {
+                send(p, new WrapperPlayServerScoreboardObjective(
+                        OBJECTIVE, ObjectiveMode.REMOVE, Component.empty(), null));
+            }
+        }
+        created.clear();
+        lastLines.clear();
+        lastTitle.clear();
+    }
+
+    // ── Update (diff — sem flicker) ───────────────────────────────────────────
 
     private void updateBoard(Player p) {
-        Scoreboard sb = boards.get(p.getUniqueId());
-        if (sb == null) {
-            create(p);
-            sb = boards.get(p.getUniqueId());
+        UUID id = p.getUniqueId();
+        if (!created.contains(id)) return; // criada via join/enable/toggle
+
+        // Título (só reenvia se mudou)
+        String title = title();
+        if (!title.equals(lastTitle.get(id))) {
+            send(p, new WrapperPlayServerScoreboardObjective(
+                    OBJECTIVE, ObjectiveMode.UPDATE, toComponent(title), RenderType.INTEGER, ScoreFormat.blankScore()));
+            lastTitle.put(id, title);
         }
-        if (sb == null) return;
 
-        Objective obj = sb.getObjective("border");
-        if (obj == null) return;
+        // Linhas
+        List<String> lines = buildLines(p);
+        int newCount = Math.min(lines.size(), MAX_LINES);
+        List<String> prev = lastLines.getOrDefault(id, Collections.emptyList());
 
+        // Score fixo por índice (independente do nº de linhas) → ordem estável,
+        // mudar a contagem nunca desloca as linhas existentes.
+        for (int i = 0; i < newCount; i++) {
+            String line = lines.get(i);
+            if (i >= prev.size() || !line.equals(prev.get(i))) {
+                send(p, new WrapperPlayServerUpdateScore(
+                        ENTRIES[i], Action.CREATE_OR_UPDATE_ITEM, OBJECTIVE,
+                        MAX_LINES - i, toComponent(line), ScoreFormat.blankScore()));
+            }
+        }
+        // Remove linhas que existiam antes mas já não existem
+        for (int i = newCount; i < prev.size(); i++) {
+            send(p, new WrapperPlayServerUpdateScore(
+                    ENTRIES[i], Action.REMOVE_ITEM, OBJECTIVE, 0, null, null));
+        }
+
+        lastLines.put(id, new ArrayList<>(lines.subList(0, newCount)));
+    }
+
+    // ── Construção das linhas (texto legacy "§") ──────────────────────────────
+
+    private List<String> buildLines(Player p) {
         FileConfiguration cfg = plugin.getConfig();
 
-        String titulo = getLogoChar() + processUnicode(cfg.getString("scoreboard.titulo", "§b§lTLS - III"));
-        obj.setDisplayName(titulo);
-
         String lFase      = color(cfg.getString("scoreboard.label_fase",         "§8Fase: "));
-        String lTempo     = color(cfg.getString("scoreboard.label_tempo",         "§8Tempo: "));
-        String lLoc       = color(cfg.getString("scoreboard.label_localizacao",   "§bLocalização:"));
-        String lX         = color(cfg.getString("scoreboard.label_x",             "§8 X: "));
-        String lZ         = color(cfg.getString("scoreboard.label_z",             "§8 Z: "));
-        String lBorda     = color(cfg.getString("scoreboard.label_borda",         "§bBorda:"));
+        String lTempo     = color(cfg.getString("scoreboard.label_tempo",        "§8Tempo: "));
+        String lLoc       = color(cfg.getString("scoreboard.label_localizacao",  "§bLocalização:"));
+        String lX         = color(cfg.getString("scoreboard.label_x",            "§8 X: "));
+        String lZ         = color(cfg.getString("scoreboard.label_z",            "§8 Z: "));
+        String lBorda     = color(cfg.getString("scoreboard.label_borda",        "§bBorda:"));
         String lBordaXZ   = color(cfg.getString("scoreboard.label_borda_xz",     "§8 X/Z: "));
         String lBordaDist = color(cfg.getString("scoreboard.label_borda_dist",   "§8 Dist: "));
-        String lEquipa    = color(cfg.getString("scoreboard.label_equipa",        "§bEquipa:"));
+        String lEquipa    = color(cfg.getString("scoreboard.label_equipa",       "§bEquipa:"));
 
         String corValor  = color(cfg.getString("scoreboard.cor_valor",  "§b"));
         String corPerigo = color(cfg.getString("scoreboard.cor_perigo", "§c"));
@@ -158,8 +239,7 @@ public class BorderScoreboardManager {
         String tmplVivo  = color(cfg.getString("scoreboard.linha_jogador_vivo",  "§b⬢ §7{nome}§8 - §c❤ {vida}"));
         String tmplMorto = color(cfg.getString("scoreboard.linha_jogador_morto", "§c§l⬢ §7{nome} - MORTO"));
 
-        // Construir lista de linhas (de cima para baixo)
-        java.util.List<String> lines = new java.util.ArrayList<>();
+        List<String> lines = new ArrayList<>();
 
         lines.add(lFase + corValor + borderManager.getCurrentStage() + "/" + borderManager.getTotalStages());
         lines.add(lTempo + corValor + format(borderManager.getRemainingShrinkSeconds()));
@@ -171,10 +251,10 @@ public class BorderScoreboardManager {
         lines.add(lZ + corValor + loc.getBlockZ());
         lines.add(" ");
 
-        WorldBorder wb   = p.getWorld().getWorldBorder();
-        double half      = wb.getSize() / 2;
-        double dist      = half - Math.max(Math.abs(loc.getX()), Math.abs(loc.getZ()));
-        String corDist   = dist <= limiarPerigo ? corPerigo : dist <= limiarAviso ? corAviso : corSeguro;
+        WorldBorder wb = p.getWorld().getWorldBorder();
+        double half    = wb.getSize() / 2;
+        double dist    = half - Math.max(Math.abs(loc.getX()), Math.abs(loc.getZ()));
+        String corDist = dist <= limiarPerigo ? corPerigo : dist <= limiarAviso ? corAviso : corSeguro;
 
         lines.add(lBorda);
         lines.add(lBordaXZ + corValor + "±" + (int) half);
@@ -189,52 +269,47 @@ public class BorderScoreboardManager {
             for (String e : t.getEntries()) {
                 Player m = Bukkit.getPlayer(e);
                 if (m == null) continue;
-                boolean vivo = m.getGameMode() == GameMode.SURVIVAL || m.getGameMode() == GameMode.ADVENTURE;
-                if (!vivo || m.isDead() || m.getHealth() <= 0) {
-                    lines.add(tmplMorto.replace("{nome}", m.getName()));
-                } else {
-                    lines.add(tmplVivo.replace("{nome}", m.getName()).replace("{vida}", String.valueOf((int) Math.ceil(m.getHealth()))));
-                }
+                lines.add(playerLine(m, tmplVivo, tmplMorto));
                 if (++count >= 4) break;
             }
         } else {
-            boolean vivo = p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE;
-            if (!vivo || p.isDead() || p.getHealth() <= 0) {
-                lines.add(tmplMorto.replace("{nome}", p.getName()));
-            } else {
-                lines.add(tmplVivo.replace("{nome}", p.getName()).replace("{vida}", String.valueOf((int) Math.ceil(p.getHealth()))));
-            }
+            lines.add(playerLine(p, tmplVivo, tmplMorto));
         }
 
-        // Aplicar linhas via Teams (sem recriar entries = sem flicker)
-        // Score decresce de (lines.size()) até 1, de cima para baixo
-        int totalLines = lines.size();
-        for (int i = 0; i < MAX_LINES; i++) {
-            Team lineTeam = sb.getTeam("sb_line_" + i);
-            if (lineTeam == null) continue;
+        return lines;
+    }
 
-            if (i < totalLines) {
-                String content = lines.get(i);
-                // Dividir em prefix (max 64) + suffix se necessário
-                if (content.length() > 64) {
-                    lineTeam.setPrefix(content.substring(0, 64));
-                    lineTeam.setSuffix(content.substring(64, Math.min(content.length(), 128)));
-                } else {
-                    lineTeam.setPrefix(content);
-                    lineTeam.setSuffix("");
-                }
-                // Adicionar entry ao objetivo com score fixo (não muda = sem flicker)
-                int score = totalLines - i;
-                if (sb.getScores(ENTRIES[i]).isEmpty()) {
-                    obj.getScore(ENTRIES[i]).setScore(score);
-                }
-            } else {
-                // Esconder linhas não usadas
-                lineTeam.setPrefix("");
-                lineTeam.setSuffix("");
-                sb.resetScores(ENTRIES[i]);
-            }
+    private String playerLine(Player m, String tmplVivo, String tmplMorto) {
+        boolean vivo = m.getGameMode() == GameMode.SURVIVAL || m.getGameMode() == GameMode.ADVENTURE;
+        if (!vivo || m.isDead() || m.getHealth() <= 0) {
+            return tmplMorto.replace("{nome}", m.getName());
         }
+        return tmplVivo
+                .replace("{nome}", m.getName())
+                .replace("{vida}", String.valueOf((int) Math.ceil(m.getHealth())));
+    }
+
+    private String title() {
+        FileConfiguration cfg = plugin.getConfig();
+        return getLogoChar() + processUnicode(cfg.getString("scoreboard.titulo", "§b§lTLS - III"));
+    }
+
+    // ── Pacotes ───────────────────────────────────────────────────────────────
+
+    private boolean send(Player p, PacketWrapper<?> wrapper) {
+        try {
+            PacketEvents.getAPI().getPlayerManager().sendPacket(p, wrapper);
+            return true;
+        } catch (Throwable t) {
+            // PacketEvents ainda não pronto, ou canal a fechar — sinaliza falha
+            // para que create() não marque a sidebar como criada.
+            return false;
+        }
+    }
+
+    private Component toComponent(String legacy) {
+        if (legacy == null || legacy.isEmpty()) return Component.empty();
+        return LegacyComponentSerializer.legacySection().deserialize(legacy);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
