@@ -8,7 +8,7 @@ def paperApiVersion = project.hasProperty('paperApiVersion') ? project.getProper
 def runMinecraftVersion = project.hasProperty('runMinecraftVersion') ? project.getProperty('runMinecraftVersion') : '26.1.2'
 
 group = 'com'
-version = '3.12.7'
+version = '3.13.1'
 
 repositories {
     // Repositórios principais

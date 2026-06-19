@@ -1,5 +1,5 @@
 name: tlsplugin
-version: "3.12.7"
+version: "3.13.1"
 main: com.tlsplugin.Tlsplugin
 api-version: "1.21"
 author: "ArrozNaTwitch"
@@ -81,3 +81,5 @@ commands:
     description: Dá os 8 blocos de lã para escolha de equipa
     usage: /tlsteams
     permission: tls.admin
+  scoreboard:
+    description: Toggle da scoreboard

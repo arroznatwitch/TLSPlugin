@@ -28,22 +28,23 @@ public class Tlsplugin extends JavaPlugin {
 
     private static Tlsplugin instance;
 
-    private BorderManager            borderManager;
-    private SpawnManager             spawnManager;
-    private BorderScoreboardManager  borderScoreboardManager;
-    private BorderTimerAnnouncer     borderTimerAnnouncer;
-    private PvPListener              pvpListener;
-    private KillListener             killListener;
-    private DeathListener            deathListener;
-    private SpectatorInspectListener spectatorListener;
-    private TrackerCompassListener   trackerCompassListener;
-    private GrapplerItemListener     grapplerItemListener;
-    private GoldPotionListener       goldPotionListener;
-    private GameFreezeManager        freezeManager;
-    private MVPStatsManager          mvpStatsManager;
-    private PlayerPauseManager       pauseManager;
-    private ProntoCommand            prontoCommand;
-    private ProximityAlertListener   proximityAlertListener;
+    private BorderManager              borderManager;
+    private SpawnManager               spawnManager;
+    private BorderScoreboardManager    borderScoreboardManager;
+    private BorderScoreboardListener   borderScoreboardListener;
+    private BorderTimerAnnouncer       borderTimerAnnouncer;
+    private PvPListener                pvpListener;
+    private KillListener               killListener;
+    private DeathListener              deathListener;
+    private SpectatorInspectListener   spectatorListener;
+    private TrackerCompassListener     trackerCompassListener;
+    private GrapplerItemListener       grapplerItemListener;
+    private GoldPotionListener         goldPotionListener;
+    private GameFreezeManager          freezeManager;
+    private MVPStatsManager            mvpStatsManager;
+    private PlayerPauseManager         pauseManager;
+    private ProntoCommand              prontoCommand;
+    private ProximityAlertListener     proximityAlertListener;
 
     @Override
     public void onEnable() {
@@ -61,6 +62,7 @@ public class Tlsplugin extends JavaPlugin {
         this.borderManager           = new BorderManager(this);
         this.borderTimerAnnouncer    = new BorderTimerAnnouncer(this, borderManager);
         this.borderScoreboardManager = new BorderScoreboardManager(this, borderManager);
+        this.borderScoreboardListener = new BorderScoreboardListener(borderScoreboardManager);
         this.mvpStatsManager         = new MVPStatsManager();
         this.mvpStatsManager.loadStats();
         this.pauseManager            = new PlayerPauseManager();
@@ -70,6 +72,7 @@ public class Tlsplugin extends JavaPlugin {
         // ==== REGISTER MANAGERS AS LISTENERS ====
         Bukkit.getPluginManager().registerEvents(borderManager, this);
         Bukkit.getPluginManager().registerEvents(freezeManager, this);
+        Bukkit.getPluginManager().registerEvents(borderScoreboardListener, this);
 
         // ==== LISTENERS ====
         this.grapplerItemListener   = new GrapplerItemListener(this);
@@ -100,18 +103,16 @@ public class Tlsplugin extends JavaPlugin {
             }
         }, this);
 
-        // Scoreboard + MVP stats
+        // MVP stats + gold potion lore (join/quit — scoreboard tratada pelo BorderScoreboardListener)
         Bukkit.getPluginManager().registerEvents(new Listener() {
             @EventHandler
             public void onJoin(PlayerJoinEvent e) {
-                borderScoreboardManager.create(e.getPlayer());
                 mvpStatsManager.registerPlayer(e.getPlayer().getName());
                 goldPotionListener.applyBaseLore(e.getPlayer());
             }
 
             @EventHandler
             public void onQuit(PlayerQuitEvent e) {
-                borderScoreboardManager.remove(e.getPlayer());
                 mvpStatsManager.unregisterPlayer(e.getPlayer().getName());
                 prontoCommand.remover(e.getPlayer().getUniqueId());
             }
@@ -167,6 +168,7 @@ public class Tlsplugin extends JavaPlugin {
         getCommand("allteamscreate").setExecutor(new AllTeamsCreateCommand());
         getCommand("mvp").setExecutor(new MvPCommand(this));
         getCommand("sobremvp").setExecutor(new AboutMVPCommand(this));
+        getCommand("scoreboard").setExecutor(borderScoreboardListener);
         getCommand("craftbook").setExecutor((sender, cmd, label, args) -> {
             if (sender instanceof Player p) CraftBookGui.openMain(p);
             return true;
@@ -181,7 +183,7 @@ public class Tlsplugin extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new com.tlsplugin.listeners.SignListener(this, signManager), this);
         getCommand("tlsteams").setExecutor(new TeamsCommand(this));
         Bukkit.getPluginManager().registerEvents(new com.tlsplugin.listeners.TeamWoolListener(this), this);
-        ConfigGui        configGui        = new ConfigGui(this);
+        ConfigGui configGui = new ConfigGui(this);
         ConfigGuiListener configGuiListener = new ConfigGuiListener(this, configGui);
         Bukkit.getPluginManager().registerEvents(configGuiListener, this);
         getCommand("tlsconfig").setExecutor(new ConfigCommand(this, configGui, configGuiListener));

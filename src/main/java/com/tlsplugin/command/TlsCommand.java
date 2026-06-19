@@ -37,6 +37,7 @@ public class TlsCommand implements CommandExecutor {
         switch (args[0].toLowerCase()) {
             case "setspawn"  -> handleSetSpawn(sender, args);
             case "tp"        -> handleTp(sender, args);
+            case "tpspawn"   -> handleTpSpawn(sender, args);
             case "spawns"    -> handleListSpawns(sender);
             case "delspawn"  -> handleDelSpawn(sender, args);
             default          -> sendHelp(sender);
@@ -56,7 +57,6 @@ public class TlsCommand implements CommandExecutor {
         Location loc;
 
         if (args.length >= 5) {
-            // Coordenadas fornecidas manualmente
             double x, y, z;
             float yaw = 0, pitch = 0;
             try {
@@ -70,7 +70,6 @@ public class TlsCommand implements CommandExecutor {
                 return;
             }
 
-            // Mundo: usa o mundo TLS ativo (ou o do jogador se for player)
             World world = resolveWorld(sender);
             if (world == null) {
                 sender.sendMessage(prefix() + "§cNão foi possível determinar o mundo. Define o mundo com §b/tlsworld§c primeiro.");
@@ -79,7 +78,6 @@ public class TlsCommand implements CommandExecutor {
             loc = new Location(world, x, y, z, yaw, pitch);
 
         } else {
-            // Sem coordenadas — usa a posição atual do jogador
             if (!(sender instanceof Player player)) {
                 sender.sendMessage(prefix() + "§cA consola precisa de especificar coordenadas: §b/tls setspawn <equipa> <x> <y> <z>");
                 return;
@@ -95,10 +93,10 @@ public class TlsCommand implements CommandExecutor {
         sender.sendMessage("§7Equipa§8: §b" + team);
         sender.sendMessage("§7Mundo§8:  §b" + loc.getWorld().getName());
         sender.sendMessage("§7X§8: §e" + String.format("%.1f", loc.getX()) +
-                           " §7Y§8: §e" + String.format("%.1f", loc.getY()) +
-                           " §7Z§8: §e" + String.format("%.1f", loc.getZ()));
+                " §7Y§8: §e" + String.format("%.1f", loc.getY()) +
+                " §7Z§8: §e" + String.format("%.1f", loc.getZ()));
         sender.sendMessage("§7Yaw§8: §e" + String.format("%.1f", loc.getYaw()) +
-                           " §7Pitch§8: §e" + String.format("%.1f", loc.getPitch()));
+                " §7Pitch§8: §e" + String.format("%.1f", loc.getPitch()));
         sender.sendMessage("§8§m──────────────────────────────");
     }
 
@@ -114,19 +112,17 @@ public class TlsCommand implements CommandExecutor {
 
         if (!spawnManager.hasSpawn(team)) {
             sender.sendMessage(prefix() + "§cNão existe spawn definido para a equipa §b" + team +
-                               "§c. Usa §b/tls setspawn§c primeiro.");
+                    "§c. Usa §b/tls setspawn§c primeiro.");
             return;
         }
 
         Location spawn = spawnManager.getSpawn(team);
 
-        // Garantir que o mundo está carregado
         if (spawn.getWorld() == null) {
             sender.sendMessage(prefix() + "§cO mundo do spawn da equipa §b" + team + " §cnão está carregado.");
             return;
         }
 
-        // Encontrar jogadores dessa equipa
         Scoreboard sb = Bukkit.getScoreboardManager().getMainScoreboard();
         Team sbTeam   = sb.getTeam(team);
 
@@ -154,6 +150,38 @@ public class TlsCommand implements CommandExecutor {
                     .reduce((a, b) -> a + ", " + b).orElse(""));
         }
         sender.sendMessage("§8§m──────────────────────────────");
+    }
+
+    // ─── /tls tpspawn <equipa> ───────────────────────────────────────────────
+    // Teleporta apenas o jogador que executa para o spawn da equipa indicada.
+    // Útil para OPs sem equipa usarem as placas de spawn.
+
+    private void handleTpSpawn(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(prefix() + "§cApenas jogadores podem usar este comando.");
+            return;
+        }
+        if (args.length < 2) {
+            sender.sendMessage(prefix() + "§cUso: §b/tls tpspawn <equipa>");
+            return;
+        }
+
+        String team = args[1].toLowerCase();
+
+        if (!spawnManager.hasSpawn(team)) {
+            sender.sendMessage(prefix() + "§cNão existe spawn definido para a equipa §b" + team + "§c.");
+            return;
+        }
+
+        Location spawn = spawnManager.getSpawn(team);
+
+        if (spawn.getWorld() == null) {
+            sender.sendMessage(prefix() + "§cO mundo do spawn da equipa §b" + team + " §cnão está carregado.");
+            return;
+        }
+
+        player.teleport(spawn);
+        player.sendMessage(prefix() + "§aTeleportado para o spawn da equipa §b" + team + "§a.");
     }
 
     // ─── /tls spawns ─────────────────────────────────────────────────────────
@@ -204,6 +232,7 @@ public class TlsCommand implements CommandExecutor {
         sender.sendMessage("§b/tls setspawn §e<equipa>            §8▸ §7Spawn na tua posição");
         sender.sendMessage("§b/tls setspawn §e<equipa> <x> <y> <z>§8▸ §7Spawn em coords específicas");
         sender.sendMessage("§b/tls tp §e<equipa>                  §8▸ §7Teleporta equipa para o spawn");
+        sender.sendMessage("§b/tls tpspawn §e<equipa>             §8▸ §7Teleporta-te para o spawn da equipa");
         sender.sendMessage("§b/tls spawns                        §8▸ §7Lista todos os spawns");
         sender.sendMessage("§b/tls delspawn §e<equipa>            §8▸ §7Remove spawn de equipa");
         sender.sendMessage("§8§m────────────────────────────────────────");
@@ -212,14 +241,13 @@ public class TlsCommand implements CommandExecutor {
 
     private World resolveWorld(CommandSender sender) {
         if (sender instanceof Player player) return player.getWorld();
-        // Consola: usa o mundo TLS ativo
         return plugin.getBorderManager().getTargetWorld();
     }
 
     private String prefix() { return "§f[§bTLS§f] "; }
     private String noPerms() {
         return plugin.getConfig().getString(
-            "mensagens_comandos.sem_permissao",
-            "§f[§bTLS§f] §cNão tens permissão.");
+                "mensagens_comandos.sem_permissao",
+                "§f[§bTLS§f] §cNão tens permissão.");
     }
 }

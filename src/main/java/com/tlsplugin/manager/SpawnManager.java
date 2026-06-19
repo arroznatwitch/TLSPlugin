@@ -18,7 +18,7 @@ public class SpawnManager {
     private final File      file;
     private YamlConfiguration yaml;
 
-    // Cache em memória: teamName → Location
+    // Cache em memória: teamName → Location (pode ter world null se ainda não carregado)
     private final Map<String, Location> spawns = new HashMap<>();
 
     public SpawnManager(Tlsplugin plugin) {
@@ -43,25 +43,35 @@ public class SpawnManager {
             String worldName = yaml.getString(path + ".world");
             if (worldName == null) continue;
 
-            World world = Bukkit.getWorld(worldName);
-            if (world == null) {
-                // Mundo não carregado agora — guarda o nome para tentar depois
-                plugin.getLogger().warning("[TLS] Spawn da equipa '" + team +
-                        "' aponta para o mundo '" + worldName + "' que não está carregado.");
-                continue;
-            }
-
-            double x   = yaml.getDouble(path + ".x");
-            double y   = yaml.getDouble(path + ".y");
-            double z   = yaml.getDouble(path + ".z");
-            float  yaw = (float) yaml.getDouble(path + ".yaw",   0);
+            double x     = yaml.getDouble(path + ".x");
+            double y     = yaml.getDouble(path + ".y");
+            double z     = yaml.getDouble(path + ".z");
+            float  yaw   = (float) yaml.getDouble(path + ".yaw",   0);
             float  pitch = (float) yaml.getDouble(path + ".pitch", 0);
 
-            spawns.put(team.toLowerCase(), new Location(world, x, y, z, yaw, pitch));
+            World world = Bukkit.getWorld(worldName);
+
+            if (world == null) {
+                // Guarda com world null — será resolvido em getSpawn()
+                plugin.getLogger().warning("[TLS] Mundo '" + worldName + "' ainda não carregado para equipa '"
+                        + team + "'. Será resolvido quando o mundo carregar.");
+            }
+
+            // Guarda sempre, mesmo com world null
+            Location loc = new Location(world, x, y, z, yaw, pitch);
+            // Guardar o nome do mundo para resolver depois
+            loc.setWorld(world); // null se não carregado ainda
+            spawns.put(team.toLowerCase(), loc);
+
+            // Guardar worldName separado para lazy loading
+            spawnWorlds.put(team.toLowerCase(), worldName);
         }
 
-        plugin.getLogger().info("[TLS] " + spawns.size() + " spawn(s) de equipa carregados.");
+        plugin.getLogger().info("[TLS] " + spawns.size() + " spawn(s) de equipa carregados do disco.");
     }
+
+    // Mapa auxiliar para guardar o nome do mundo mesmo que não esteja carregado
+    private final Map<String, String> spawnWorlds = new HashMap<>();
 
     public void save() {
         if (yaml == null) yaml = new YamlConfiguration();
@@ -71,7 +81,10 @@ public class SpawnManager {
             Location loc  = entry.getValue();
             String   path = "spawns." + team;
 
-            yaml.set(path + ".world", loc.getWorld().getName());
+            String worldName = spawnWorlds.getOrDefault(team, loc.getWorld() != null ? loc.getWorld().getName() : null);
+            if (worldName == null) continue;
+
+            yaml.set(path + ".world", worldName);
             yaml.set(path + ".x",     loc.getX());
             yaml.set(path + ".y",     loc.getY());
             yaml.set(path + ".z",     loc.getZ());
@@ -90,11 +103,26 @@ public class SpawnManager {
 
     public void setSpawn(String team, Location location) {
         spawns.put(team.toLowerCase(), location.clone());
+        spawnWorlds.put(team.toLowerCase(), location.getWorld().getName());
         save();
     }
 
     public Location getSpawn(String team) {
-        return spawns.get(team.toLowerCase());
+        Location loc = spawns.get(team.toLowerCase());
+        if (loc == null) return null;
+
+        // Lazy world resolution
+        if (loc.getWorld() == null) {
+            String worldName = spawnWorlds.get(team.toLowerCase());
+            if (worldName != null) {
+                World world = Bukkit.getWorld(worldName);
+                if (world != null) {
+                    loc.setWorld(world);
+                }
+            }
+        }
+
+        return loc;
     }
 
     public boolean hasSpawn(String team) {
@@ -103,6 +131,7 @@ public class SpawnManager {
 
     public void removeSpawn(String team) {
         spawns.remove(team.toLowerCase());
+        spawnWorlds.remove(team.toLowerCase());
         if (yaml != null) yaml.set("spawns." + team.toLowerCase(), null);
         save();
     }
