@@ -13,7 +13,7 @@ mundo_lobby: "world"
 # Define qual o perfil de bordas ativo: "final" ou "teste"
 # "final" → 10 fases, 12 minutos por fase (jogo oficial)
 # "teste"  → 7 fases,  10 minutos por fase (para testar)
-modo_jogo: "final"
+modo_jogo: "teste"
 
 modos:
   final:
@@ -372,7 +372,7 @@ gold_potion:
 # --- Configuração do Scoreboard (Sidebar) ---
 scoreboard:
   # Título da sidebar
-  titulo: "§b§lTLS - III"
+  titulo: "§b§l"
 
   # Etiquetas das secções (texto que aparece como cabeçalho de cada bloco)
   label_fase: "§8Fase: "

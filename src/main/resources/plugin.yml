@@ -1,5 +1,5 @@
 name: tlsplugin
-version: "3.12.6"
+version: "3.12.7"
 main: com.tlsplugin.Tlsplugin
 api-version: "1.21"
 author: "ArrozNaTwitch"
@@ -69,7 +69,7 @@ commands:
   tls:
     description: Gestão de spawns de equipas
     usage: /tls <setspawn|tp|spawns|delspawn> [args]
-    permission: tls.admin
+    permission: tls.admin pe
   tlspawn:
     description: Teleporta para o spawn da tua equipa
     usage: /tlspawn

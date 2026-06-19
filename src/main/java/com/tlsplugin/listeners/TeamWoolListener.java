@@ -78,11 +78,26 @@ public class TeamWoolListener implements Listener {
 
             String display = sec != null ? sec.getString("display_name", groupName) : groupName;
             String displayClean = display.replaceAll("§.", "").trim();
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                // Adicionar à scoreboard team
+                org.bukkit.scoreboard.Scoreboard sb = Bukkit.getScoreboardManager().getMainScoreboard();
 
-            Bukkit.getScheduler().runTask(plugin, () ->
+                // Remover das outras teams
+                for (String other : TeamWoolItem.allTeams()) {
+                    org.bukkit.scoreboard.Team otherTeam = sb.getTeam(other);
+                    if (otherTeam != null) otherTeam.removeEntry(player.getName());
+                }
+
+                // Adicionar à nova team
+                org.bukkit.scoreboard.Team sbTeam = sb.getTeam(groupName);
+                if (sbTeam != null) {
+                    sbTeam.addEntry(player.getName());
+                }
+
                 player.sendMessage(plugin.getConfig()
                         .getString("teams.mensagem_equipa", "§aJuntaste-te à equipa §b{equipa}§a!")
-                        .replace("{equipa}", displayClean)));
+                        .replace("{equipa}", displayClean));
+            });
         });
     }
 }
