@@ -406,9 +406,6 @@ scoreboard:
   linha_jogador_vivo: "§b⬢ §7{nome}§8 - §c❤ {vida}"
   linha_jogador_morto: "§c§l⬢ §7{nome} - MORTO"
 
-  # Nick do jogador (mostrado centrado logo abaixo do título)
-  cor_nick: "§f§l"
-
   # Rodapé (última linha, centrado) — branding do servidor
   rodape: "craftandhelps.com"
   cor_rodape: "§7§o"

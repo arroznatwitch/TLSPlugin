@@ -241,9 +241,6 @@ public class BorderScoreboardManager {
 
         List<String> lines = new ArrayList<>();
 
-        String corNick = color(cfg.getString("scoreboard.cor_nick", "§f§l"));
-        String nickLine = corNick + p.getName();
-
         lines.add(lFase + corValor + borderManager.getCurrentStage() + "/" + borderManager.getTotalStages());
         lines.add(lTempo + corValor + format(borderManager.getRemainingShrinkSeconds()));
         lines.add("");
@@ -282,14 +279,10 @@ public class BorderScoreboardManager {
             }
         }
 
-        // Nick (logo a seguir ao título) e rodapé (última linha) — ambos centrados em relação
-        // à linha mais larga já existente, para a board ficar equilibrada visualmente mesmo
-        // em modo Solo, onde a secção de Equipa não aparece.
+        // Rodapé (última linha) — centrado em relação à linha mais larga já existente, para
+        // ficar equilibrado visualmente quer em Solo quer em Equipas.
         int targetWidth = 0;
         for (String l : lines) targetWidth = Math.max(targetWidth, textWidth(l));
-
-        lines.add(0, centerText(nickLine, targetWidth));
-        lines.add(1, "");
 
         String rodape   = cfg.getString("scoreboard.rodape", "craftandhelps.com");
         String corRodape = color(cfg.getString("scoreboard.cor_rodape", "§7§o"));
