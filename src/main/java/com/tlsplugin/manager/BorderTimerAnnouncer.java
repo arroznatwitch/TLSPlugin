@@ -46,9 +46,9 @@ public class BorderTimerAnnouncer {
         String setaAtual   = plugin.getConfig().getString("border_announcer.seta_atual",   "▶ ");
         String prefixoFutura = plugin.getConfig().getString("border_announcer.prefixo_futuro", "  ");
 
-        Bukkit.broadcastMessage(t(cabecalho));
-        Bukkit.broadcastMessage(t(titulo));
-        Bukkit.broadcastMessage("");
+        Tlsplugin.broadcast(t(cabecalho));
+        Tlsplugin.broadcast(t(titulo));
+        Tlsplugin.broadcast("");
 
         for (int i = 0; i < bordas.size(); i++) {
             double borda = bordas.get(i);
@@ -67,11 +67,11 @@ public class BorderTimerAnnouncer {
                 linha = corFutura + prefixoFutura + "Borda " + numero + " — X/Z " + coord;
             }
 
-            Bukkit.broadcastMessage(t(linha));
+            Tlsplugin.broadcast(t(linha));
         }
 
-        Bukkit.broadcastMessage("");
-        Bukkit.broadcastMessage(t(rodape));
+        Tlsplugin.broadcast("");
+        Tlsplugin.broadcast(t(rodape));
     }
 
     private String t(String s) {

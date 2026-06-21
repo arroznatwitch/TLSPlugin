@@ -45,7 +45,7 @@ public class AnunciarCommand implements CommandExecutor {
                 + linhaVazia + "\n"
                 + separador;
 
-        Bukkit.broadcastMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', anuncio));
+        Tlsplugin.broadcast(org.bukkit.ChatColor.translateAlternateColorCodes('&', anuncio));
         return true;
     }
 }

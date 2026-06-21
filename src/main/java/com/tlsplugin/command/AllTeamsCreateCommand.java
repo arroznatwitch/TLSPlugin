@@ -1,62 +1,35 @@
 package com.tlsplugin.command;
 
-import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
+import com.tlsplugin.Tlsplugin;
+import com.tlsplugin.manager.TeamManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.scoreboard.Scoreboard;
-import org.bukkit.scoreboard.Team;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 public class AllTeamsCreateCommand implements CommandExecutor {
 
-    private final Map<String, String> teams = new LinkedHashMap<>();
+    private final Tlsplugin plugin;
 
-    public AllTeamsCreateCommand() {
-        teams.put("red",    "󰀁");
-        teams.put("blue",   "󰀂");
-        teams.put("green",  "󰀃");
-        teams.put("yellow", "󰀄");
-        teams.put("admin",  "󰀅");
-        teams.put("pink",   "󰀆");
-        teams.put("grey",   "󰀇");
-        teams.put("purple", "󰀈");
-        teams.put("orange", "󰀉");
+    public AllTeamsCreateCommand(Tlsplugin plugin) {
+        this.plugin = plugin;
     }
-
-
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.isOp()) {
-            sender.sendMessage(com.tlsplugin.Tlsplugin.getInstance().getConfig()
+            sender.sendMessage(Tlsplugin.getInstance().getConfig()
                     .getString("mensagens_comandos.sem_permissao", "§cSem permissão."));
             return true;
         }
 
-        Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
-
-        int created = 0;
-        int skipped = 0;
-
-        for (Map.Entry<String, String> entry : teams.entrySet()) {
-            String teamName = entry.getKey();
-            String symbol   = entry.getValue();
-            Team existing   = scoreboard.getTeam(teamName);
-            if (existing != null) { skipped++; continue; }
-            Team newTeam = scoreboard.registerNewTeam(teamName);
-            newTeam.prefix(Component.text(symbol + " "));
-            created++;
-        }
+        TeamManager teamManager = plugin.getTeamManager();
+        int[] resultado = teamManager.ensureTeamsExist();
 
         sender.sendMessage("");
         sender.sendMessage("§b§l  Equipas criadas");
         sender.sendMessage("");
-        sender.sendMessage("  §7Criadas:          §a" + created);
-        sender.sendMessage("  §7Já existiam:      §e" + skipped);
+        sender.sendMessage("  §7Criadas:          §a" + resultado[0]);
+        sender.sendMessage("  §7Já existiam (cor/ícone reaplicados): §e" + resultado[1]);
         sender.sendMessage("");
         return true;
     }

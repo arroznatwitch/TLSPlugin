@@ -45,6 +45,7 @@ public class Tlsplugin extends JavaPlugin {
     private PlayerPauseManager         pauseManager;
     private ProntoCommand              prontoCommand;
     private ProximityAlertListener     proximityAlertListener;
+    private TeamManager                teamManager;
 
     @Override
     public void onEnable() {
@@ -68,6 +69,7 @@ public class Tlsplugin extends JavaPlugin {
         this.pauseManager            = new PlayerPauseManager();
         this.prontoCommand           = new ProntoCommand(this);
         this.proximityAlertListener  = new ProximityAlertListener(this);
+        this.teamManager             = new TeamManager(this);
 
         // ==== REGISTER MANAGERS AS LISTENERS ====
         Bukkit.getPluginManager().registerEvents(borderManager, this);
@@ -103,12 +105,21 @@ public class Tlsplugin extends JavaPlugin {
             }
         }, this);
 
+        // Equipas: garante que as 9 Teams existem com a cor/ícone certos (auto-cura, mesmo se o
+        // scoreboard.dat tiver perdido informação numa queda anterior do servidor) e sincroniza
+        // quem já estiver online a partir do grupo do LuckPerms.
+        teamManager.ensureTeamsExist();
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            teamManager.syncPlayer(p);
+        }
+
         // MVP stats + gold potion lore (join/quit — scoreboard tratada pelo BorderScoreboardListener)
         Bukkit.getPluginManager().registerEvents(new Listener() {
             @EventHandler
             public void onJoin(PlayerJoinEvent e) {
                 mvpStatsManager.registerPlayer(e.getPlayer().getName());
                 goldPotionListener.applyBaseLore(e.getPlayer());
+                teamManager.syncPlayer(e.getPlayer());
             }
 
             @EventHandler
@@ -166,7 +177,7 @@ public class Tlsplugin extends JavaPlugin {
         getCommand("unpause").setExecutor(new UnPauseCommand(borderManager, freezeManager, mvpStatsManager));
         getCommand("pedirpausa").setExecutor(new PedirPausaCommand(this));
         getCommand("aceitarpausa").setExecutor(new AceitarPausaCommand(this));
-        getCommand("allteamscreate").setExecutor(new AllTeamsCreateCommand());
+        getCommand("allteamscreate").setExecutor(new AllTeamsCreateCommand(this));
         getCommand("mvp").setExecutor(new MvPCommand(this));
         getCommand("sobremvp").setExecutor(new AboutMVPCommand(this));
         getCommand("scoreboard").setExecutor(borderScoreboardListener);
@@ -213,6 +224,10 @@ public class Tlsplugin extends JavaPlugin {
         CraftBookGui.loadConfig(getDataFolder());
         if (borderManager != null) borderManager.reloadStages();
         for (World w : Bukkit.getWorlds()) applyGamerules(w);
+        if (teamManager != null) {
+            teamManager.ensureTeamsExist();
+            for (Player p : Bukkit.getOnlinePlayers()) teamManager.syncPlayer(p);
+        }
     }
 
     public boolean isSoloMode() {
@@ -222,6 +237,23 @@ public class Tlsplugin extends JavaPlugin {
     public boolean isLobbyWorld(org.bukkit.World world) {
         if (world == null) return false;
         return world.getName().equalsIgnoreCase(getConfig().getString("mundo_lobby", "world"));
+    }
+
+    /**
+     * Envia uma mensagem a todos os jogadores online + consola, diretamente, em vez de usar
+     * {@code Bukkit.broadcastMessage(...)}. O broadcast nativo do Bukkit só entrega a quem tem a
+     * permissão "bukkit.broadcast.user" — em servidores com LuckPerms a negar essa permissão por
+     * predefinição (comum para evitar spam de "conquista alcançada"), as mensagens do plugin
+     * (/anunciar, avisos de borda, etc.) simplesmente não chegavam a ninguém, mesmo a OPs sem essa
+     * permissão explícita. Esta forma garante a entrega a toda a gente, independentemente de
+     * permissões de broadcast.
+     */
+    public static void broadcast(String message) {
+        if (message == null) return;
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            p.sendMessage(message);
+        }
+        Bukkit.getConsoleSender().sendMessage(message);
     }
 
     public void applyGamerules(World world) {
@@ -257,4 +289,5 @@ public class Tlsplugin extends JavaPlugin {
     public MVPStatsManager getMVPStatsManager()                    { return mvpStatsManager; }
     public PlayerPauseManager getPauseManager()                    { return pauseManager; }
     public ProntoCommand getProntoCommand()                        { return prontoCommand; }
+    public TeamManager getTeamManager()                            { return teamManager; }
 }

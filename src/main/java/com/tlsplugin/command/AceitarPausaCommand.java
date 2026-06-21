@@ -61,7 +61,7 @@ public class AceitarPausaCommand implements CommandExecutor {
                         "pausa_jogador.mensagens.pausa_aceite_global",
                         "§f[§bTLS§f] O jogador \"§e{player}§f\" pausou o jogo e voltamos nuns instantes...")
                 .replace("{player}", nick);
-        org.bukkit.Bukkit.broadcastMessage(msgGlobal);
+        Tlsplugin.broadcast(msgGlobal);
 
         // Iniciar o countdown de 2 minutos e depois despausar automaticamente
         int duracaoSegundos = plugin.getConfig().getInt("pausa_jogador.duracao_segundos", 120);

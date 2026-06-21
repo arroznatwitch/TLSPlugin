@@ -50,11 +50,15 @@ public class EndGameCommand implements CommandExecutor {
             plugin.getMVPStatsManager().saveStats();
         }
 
-        Bukkit.broadcastMessage("");
-        Bukkit.broadcastMessage(plugin.getConfig().getString(
+        for (org.bukkit.entity.Player p : Bukkit.getOnlinePlayers()) {
+            p.setGameMode(org.bukkit.GameMode.ADVENTURE);
+        }
+
+        Tlsplugin.broadcast("");
+        Tlsplugin.broadcast(plugin.getConfig().getString(
                 "mensagens_comandos.jogo_terminado",
                 "§f[§bTLS§f] §c§lO jogo foi terminado pelo administrador!"));
-        Bukkit.broadcastMessage("");
+        Tlsplugin.broadcast("");
         return true;
     }
 }

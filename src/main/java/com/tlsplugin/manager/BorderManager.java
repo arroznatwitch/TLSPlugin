@@ -144,8 +144,7 @@ public class BorderManager implements Listener {
             this.currentStageIndex    = yaml.getInt("currentStageIndex",      0);
             this.remainingShrinkSeconds = yaml.getInt("remainingShrinkSeconds", 0);
 
-            World w          = getTargetWorld();
-            double targetSize = stages.get(Math.min(currentStageIndex + 1, stages.size() - 1));
+            World w = getTargetWorld();
 
             if (!lastSafeExit) {
                 this.paused       = true;
@@ -157,11 +156,16 @@ public class BorderManager implements Listener {
             }
 
             if (this.paused) {
-                w.getWorldBorder().setSize(stages.get(currentStageIndex));
+                // CORREÇÃO: antes saltava para o tamanho do INÍCIO da fase (stages.get(currentStageIndex)),
+                // o que fazia a borda "voltar para trás" sempre que o servidor reiniciava/caía.
+                // Agora travamos no tamanho REAL onde a borda ficou (o Minecraft guarda o lerp em curso
+                // no level.dat), preservando o progresso já feito.
+                double frozenSize = w.getWorldBorder().getSize();
+                w.getWorldBorder().setSize(frozenSize);
                 updateBossBarPaused(0);
             } else {
-                w.getWorldBorder().setSize(targetSize, remainingShrinkSeconds);
-                scheduleNextShrink();
+                // Continua o shrink a partir do tempo restante guardado, sem reiniciar a contagem.
+                resumeShrink();
             }
 
             applyGameRulesForStage(currentStageIndex + 1);
@@ -189,7 +193,7 @@ public class BorderManager implements Listener {
                 String crashMsg = plugin.getConfig().getString(
                         "mensagens_comandos.crash_aviso",
                         "§c[TLS] ⚠ O servidor caiu inesperadamente. O jogo está §lPAUSADO§c. Use §f/unpause §cpara retomar.");
-                Bukkit.broadcastMessage(crashMsg);
+                Tlsplugin.broadcast(crashMsg);
                 crashDetected = false;
             }, 20L);
         }
@@ -245,7 +249,6 @@ public class BorderManager implements Listener {
 
         double to          = stages.get(currentStageIndex + 1);
         int shrinkSeconds  = getShrinkSeconds();
-        int pauseSeconds   = getPauseSeconds();
 
         World w = getTargetWorld();
         w.getWorldBorder().setCenter(0, 0);
@@ -253,7 +256,47 @@ public class BorderManager implements Listener {
         this.remainingShrinkSeconds = shrinkSeconds;
         saveState();
 
+        startShrinkLoop(to);
+    }
+
+    /**
+     * Continua o shrink da fase atual a partir do {@code remainingShrinkSeconds} já guardado,
+     * em vez de reiniciar a contagem (full duration) como o {@link #scheduleNextShrink()} faz.
+     * Usado para retomar de uma pausa manual (/unpause) ou de uma recuperação de crash, para que
+     * a borda "não volte para trás" e a pausa aconteça nos minutos exatos onde ficou.
+     */
+    private void resumeShrink() {
+        if (currentStageIndex < 0 || currentStageIndex >= stages.size() - 1) {
+            scheduleNextShrink();
+            return;
+        }
+        if (remainingShrinkSeconds <= 0) {
+            scheduleNextShrink();
+            return;
+        }
+
+        this.paused = false;
+        applyGameRulesForStage(currentStageIndex + 1);
+
+        double to = stages.get(currentStageIndex + 1);
+
+        World w = getTargetWorld();
+        w.getWorldBorder().setCenter(0, 0);
+        // Continua a interpolação a partir do tamanho atual (já travado na pausa) até ao alvo,
+        // usando só o tempo que falta — não os segundos totais da fase.
+        w.getWorldBorder().setSize(to, remainingShrinkSeconds);
+        saveState();
+
+        startShrinkLoop(to);
+    }
+
+    /** Cria (ou recria) o loop de tick que faz avançar o shrink, atualiza a bossbar e os alertas de proximidade. */
+    private void startShrinkLoop(double to) {
         if (alertTask != null) { alertTask.cancel(); alertTask = null; }
+
+        int pauseSeconds  = getPauseSeconds();
+        int shrinkSeconds = getShrinkSeconds();
+        World w           = getTargetWorld();
 
         // ── CORREÇÃO CRÍTICA #3: array de referência para evitar NPE no 1º tick ──
         BukkitTask[] taskRef = new BukkitTask[1];
@@ -409,7 +452,7 @@ public class BorderManager implements Listener {
                 .replace("{coord}", coord)
                 .replace("{to}",    coord)
                 .replace("{time}",  formatSeconds(timeSeconds));
-        Bukkit.broadcastMessage(ChatColor.translateAlternateColorCodes('§', msg));
+        Tlsplugin.broadcast(ChatColor.translateAlternateColorCodes('§', msg));
     }
 
     private String formatSeconds(int seconds) {
@@ -461,14 +504,32 @@ public class BorderManager implements Listener {
 
     public void setPaused(boolean paused) {
         this.paused = paused;
+        if (paused) {
+            // CORREÇÃO: antes chamava resetCurrentStage(), que saltava a borda de volta para o
+            // tamanho do INÍCIO da fase e reiniciava o tempo todo. Agora só travamos a borda no
+            // tamanho onde ela está NESTE momento, sem perder o progresso do shrink.
+            World w = getTargetWorld();
+            double currentSize = w.getWorldBorder().getSize();
+            w.getWorldBorder().setSize(currentSize);
+            updateBossBarPaused(0);
+        }
         saveState();
-        if (paused) resetCurrentStage();
     }
 
     public void resumeAfterPause() {
-        this.paused = false;
-        saveState();
-        scheduleNextShrink();
+        if (pauseTask != null) {
+            // Estávamos no intervalo programado entre bordas (não a meio de um shrink) —
+            // cancela a contagem desse intervalo e avança já para a próxima fase.
+            pauseTask.cancel();
+            pauseTask = null;
+            this.paused = false;
+            saveState();
+            scheduleNextShrink();
+        } else {
+            // Estávamos pausados a meio de um shrink (pausa manual ou recuperação de crash) —
+            // continua exatamente do ponto/tempo onde ficou, em vez de reiniciar a fase.
+            resumeShrink();
+        }
     }
 
     public boolean isBordaSetada()  { return bordaSetada; }
