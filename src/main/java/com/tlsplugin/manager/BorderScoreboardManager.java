@@ -259,21 +259,24 @@ public class BorderScoreboardManager {
         lines.add(lBorda);
         lines.add(lBordaXZ + corValor + "±" + (int) half);
         lines.add(lBordaDist + corDist + (int) dist + "m");
-        lines.add("  ");
 
-        lines.add(lEquipa);
-
-        Team t = Bukkit.getScoreboardManager().getMainScoreboard().getEntryTeam(p.getName());
-        if (t != null) {
-            int count = 0;
-            for (String e : t.getEntries()) {
-                Player m = Bukkit.getPlayer(e);
-                if (m == null) continue;
-                lines.add(playerLine(m, tmplVivo, tmplMorto));
-                if (++count >= 4) break;
+        // A linha de jogador vivo/morto só faz sentido em modo Equipas. Usamos a config
+        // "tipo_jogo" (a fonte da verdade do modo de jogo) — e não se o jogador tem uma Team
+        // atribuída, porque isso pode continuar verdadeiro em Solo (ex.: resíduo de testes).
+        boolean modoEquipas = cfg.getString("tipo_jogo", "solo").equalsIgnoreCase("equipas");
+        if (modoEquipas) {
+            Team t = Bukkit.getScoreboardManager().getMainScoreboard().getEntryTeam(p.getName());
+            if (t != null) {
+                lines.add("  ");
+                lines.add(lEquipa);
+                int count = 0;
+                for (String e : t.getEntries()) {
+                    Player m = Bukkit.getPlayer(e);
+                    if (m == null) continue;
+                    lines.add(playerLine(m, tmplVivo, tmplMorto));
+                    if (++count >= 4) break;
+                }
             }
-        } else {
-            lines.add(playerLine(p, tmplVivo, tmplMorto));
         }
 
         return lines;

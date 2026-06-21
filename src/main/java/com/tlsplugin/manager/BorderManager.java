@@ -41,6 +41,7 @@ public class BorderManager implements Listener {
     private final int ALERT_COOLDOWN_SECONDS = 15;
     private final Set<UUID> alertCooldown   = new HashSet<>();
     private boolean crashDetected = false;
+    private boolean lastExitWasSafe = true;
 
     public BorderManager(Tlsplugin plugin) {
         this.plugin = plugin;
@@ -132,7 +133,6 @@ public class BorderManager implements Listener {
 
         YamlConfiguration yaml    = YamlConfiguration.loadConfiguration(file);
         boolean wasRunning        = yaml.getBoolean("running",       false);
-        boolean wasPaused         = yaml.getBoolean("paused",        false);
         boolean lastSafeExit      = yaml.getBoolean("lastSafeExit",  true);
 
         if (yaml.contains("targetWorldName")) {
@@ -146,27 +146,28 @@ public class BorderManager implements Listener {
 
             World w = getTargetWorld();
 
+            // O jogo estava a correr quando o plugin desligou. Quer tenha sido um crash a sério,
+            // quer um /stop normal (ex.: pelo painel), pausamos SEMPRE e avisamos ao entrarem —
+            // ninguém deve ver a borda mexer sozinha sem a staff dar /unpause primeiro. O tempo
+            // guardado (remainingShrinkSeconds) é sempre preservado, nunca recomeça do zero.
+            this.paused          = true;
+            this.crashDetected   = true;
+            this.lastExitWasSafe = lastSafeExit;
             if (!lastSafeExit) {
-                this.paused       = true;
-                this.crashDetected = true;
                 plugin.getLogger().warning(
-                        "[TLS] Queda do servidor detectada! Jogo sera pausado quando jogadores entrarem.");
+                        "[TLS] Queda do servidor detectada! Jogo foi pausado, aguarda /unpause.");
             } else {
-                this.paused = wasPaused;
+                plugin.getLogger().info(
+                        "[TLS] O servidor reiniciou com o jogo a decorrer. Jogo foi pausado, aguarda /unpause.");
             }
 
-            if (this.paused) {
-                // CORREÇÃO: antes saltava para o tamanho do INÍCIO da fase (stages.get(currentStageIndex)),
-                // o que fazia a borda "voltar para trás" sempre que o servidor reiniciava/caía.
-                // Agora travamos no tamanho REAL onde a borda ficou (o Minecraft guarda o lerp em curso
-                // no level.dat), preservando o progresso já feito.
-                double frozenSize = w.getWorldBorder().getSize();
-                w.getWorldBorder().setSize(frozenSize);
-                updateBossBarPaused(0);
-            } else {
-                // Continua o shrink a partir do tempo restante guardado, sem reiniciar a contagem.
-                resumeShrink();
-            }
+            // CORREÇÃO: antes saltava para o tamanho do INÍCIO da fase (stages.get(currentStageIndex)),
+            // o que fazia a borda "voltar para trás" sempre que o servidor reiniciava/caía.
+            // Agora travamos no tamanho REAL onde a borda ficou (o Minecraft guarda o lerp em curso
+            // no level.dat), preservando o progresso já feito.
+            double frozenSize = w.getWorldBorder().getSize();
+            w.getWorldBorder().setSize(frozenSize);
+            updateBossBarPaused(0);
 
             applyGameRulesForStage(currentStageIndex + 1);
             bossBar.setVisible(true);
@@ -190,10 +191,14 @@ public class BorderManager implements Listener {
         if (crashDetected) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 plugin.getFreezeManager().freezeAll();
-                String crashMsg = plugin.getConfig().getString(
-                        "mensagens_comandos.crash_aviso",
-                        "§c[TLS] ⚠ O servidor caiu inesperadamente. O jogo está §lPAUSADO§c. Use §f/unpause §cpara retomar.");
-                Tlsplugin.broadcast(crashMsg);
+                String msg = lastExitWasSafe
+                        ? plugin.getConfig().getString(
+                                "mensagens_comandos.restart_aviso",
+                                "§e[TLS] ⚠ O servidor reiniciou. O jogo está §lPAUSADO§e. Use §f/unpause §epara retomar.")
+                        : plugin.getConfig().getString(
+                                "mensagens_comandos.crash_aviso",
+                                "§c[TLS] ⚠ O servidor caiu inesperadamente. O jogo está §lPAUSADO§c. Use §f/unpause §cpara retomar.");
+                Tlsplugin.broadcast(msg);
                 crashDetected = false;
             }, 20L);
         }

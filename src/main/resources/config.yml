@@ -159,6 +159,7 @@ mensagens_comandos:
   erro_jogador_nao_encontrado: "§f[§bTLS§f] §cJogador {player} não encontrado."
   reloadead: "§f[§bTLS§f] §aConfiguração recarregada com sucesso!"
   crash_aviso: "§c[TLS] ⚠ O servidor caiu inesperadamente. O jogo foi §lPAUSADO§r§c. Use §f/unpause §cpara retomar."
+  restart_aviso: "§e[TLS] ⚠ O servidor reiniciou. O jogo foi §lPAUSADO§r§e. Use §f/unpause §epara retomar."
   jogo_iniciado: "§f[§bTLS§f] §aO jogo começou e as regras foram aplicadas."
   endgame_palavra_confirmar: "confirmar"
   endgame_confirmar: "§c⚠ Tens a certeza? Escreve §f/endgame confirmar §cpara terminar o jogo."

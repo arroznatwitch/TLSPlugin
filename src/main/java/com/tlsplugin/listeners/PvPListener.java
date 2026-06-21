@@ -129,6 +129,7 @@ public class PvPListener implements Listener {
         if (plugin.isLobbyWorld(p.getWorld())) return;
         if (freezeManager.isFrozen()) return;
         double amount = e.getAmount();
+        if (amount <= 0) return;
         int dec = plugin.getConfig().getInt("pvp_decimais", 1);
         String formatted = format(amount, dec);
 
