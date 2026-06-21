@@ -241,6 +241,9 @@ public class BorderScoreboardManager {
 
         List<String> lines = new ArrayList<>();
 
+        String corNick = color(cfg.getString("scoreboard.cor_nick", "§f§l"));
+        String nickLine = corNick + p.getName();
+
         lines.add(lFase + corValor + borderManager.getCurrentStage() + "/" + borderManager.getTotalStages());
         lines.add(lTempo + corValor + format(borderManager.getRemainingShrinkSeconds()));
         lines.add("");
@@ -278,6 +281,20 @@ public class BorderScoreboardManager {
                 }
             }
         }
+
+        // Nick (logo a seguir ao título) e rodapé (última linha) — ambos centrados em relação
+        // à linha mais larga já existente, para a board ficar equilibrada visualmente mesmo
+        // em modo Solo, onde a secção de Equipa não aparece.
+        int targetWidth = 0;
+        for (String l : lines) targetWidth = Math.max(targetWidth, textWidth(l));
+
+        lines.add(0, centerText(nickLine, targetWidth));
+        lines.add(1, "");
+
+        String rodape   = cfg.getString("scoreboard.rodape", "craftandhelps.com");
+        String corRodape = color(cfg.getString("scoreboard.cor_rodape", "§7§o"));
+        lines.add("  ");
+        lines.add(centerText(corRodape + rodape, targetWidth));
 
         return lines;
     }
@@ -345,5 +362,48 @@ public class BorderScoreboardManager {
 
     private String format(int sec) {
         return String.format("%02d:%02d", sec / 60, sec % 60);
+    }
+
+    // ── Centralização de texto (largura real de pixels da fonte default) ───────
+
+    private static final Map<Character, Integer> CHAR_WIDTHS = new HashMap<>();
+    private static final int DEFAULT_CHAR_WIDTH = 5;
+    private static final int SPACE_WIDTH        = 3;
+    static {
+        String[] narrow1 = {"i", "l", ".", ",", ":", ";", "'", "!", "|", "I"};
+        for (String s : narrow1) CHAR_WIDTHS.put(s.charAt(0), 1);
+        CHAR_WIDTHS.put('I', 3);
+        String[] w3 = {"[", "]", "t", "I"};
+        for (String s : w3) CHAR_WIDTHS.put(s.charAt(0), 3);
+        String[] w4 = {"f", "k", "\"", "<", ">", "(", ")", "{", "}", "*"};
+        for (String s : w4) CHAR_WIDTHS.put(s.charAt(0), 4);
+        CHAR_WIDTHS.put('@', 6);
+    }
+
+    /** Largura aproximada (em pixels) de um texto, ignorando os códigos de cor "§x". */
+    private int textWidth(String text) {
+        int width = 0;
+        boolean bold = false;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '§' && i + 1 < text.length()) {
+                char code = Character.toLowerCase(text.charAt(i + 1));
+                bold = (code == 'l');
+                if (code == 'r') bold = false;
+                i++;
+                continue;
+            }
+            int w = c == ' ' ? SPACE_WIDTH : CHAR_WIDTHS.getOrDefault(c, DEFAULT_CHAR_WIDTH);
+            width += w + 1 + (bold ? 1 : 0); // +1 = espaço entre carateres da fonte default
+        }
+        return width;
+    }
+
+    /** Centra {@code text} adicionando espaços à esquerda em relação a {@code targetWidth} (px). */
+    private String centerText(String text, int targetWidth) {
+        int diff = targetWidth - textWidth(text);
+        if (diff <= 0) return text;
+        int spaces = diff / (2 * (SPACE_WIDTH + 1));
+        return " ".repeat(Math.max(0, spaces)) + text;
     }
 }

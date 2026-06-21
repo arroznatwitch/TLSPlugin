@@ -65,6 +65,12 @@ public class ConfigGui {
         ICONS.put("vida_revive",           Material.HEART_OF_THE_SEA);
         ICONS.put("tempo_vivo",            Material.CLOCK);
         ICONS.put("ddrd",                  Material.GOLD_INGOT);
+        ICONS.put("teams",                 Material.WHITE_BANNER);
+        ICONS.put("chances_nivel",         Material.ENCHANTED_BOOK);
+        ICONS.put("duracao",               Material.CLOCK);
+        ICONS.put("special_items",         Material.NETHER_STAR);
+        ICONS.put("mobs",                  Material.ZOMBIE_HEAD);
+        ICONS.put("items",                 Material.CHEST);
     }
 
     static {
@@ -116,6 +122,9 @@ public class ConfigGui {
         DISPLAY_NAMES.put("chances_nivel",          "Chances por Nível");
         DISPLAY_NAMES.put("duracao",                "Duração");
         DISPLAY_NAMES.put("mobs",                   "Mobs");
+        DISPLAY_NAMES.put("teams",                  "Sistema de Equipas");
+        DISPLAY_NAMES.put("special_items",          "Itens Especiais");
+        DISPLAY_NAMES.put("items",                  "Itens da Equipa");
     }
 
     public ConfigGui(Tlsplugin plugin) {
@@ -142,16 +151,16 @@ public class ConfigGui {
 
         // Title item (top-center)
         inv.setItem(4, decor(Material.NETHER_STAR,
-            "§b§lTLS Plugin §8▸ §f§lConfiguração",
-            "§8§m──────────────────────────",
-            "§7Seleciona uma secção para editar.",
-            "§7Apenas §badmins §7podem alterar valores.",
-            "§8§m──────────────────────────"
+                "§b§lTLS Plugin §8▸ §f§lConfiguração",
+                "§8§m──────────────────────────",
+                "§7Seleciona uma secção para editar.",
+                "§7Apenas §badmins §7podem alterar valores.",
+                "§8§m──────────────────────────"
         ));
 
         // Close button (bottom-center)
         inv.setItem(49, navItem(Material.BARRIER, "§c§lFechar",
-            "§7Fecha este menu.", "close", null));
+                "§7Fecha este menu.", "close", null));
 
         // Place config keys in content area (slots 10-16, 19-25, 28-34, 37-43)
         List<String> keys = new ArrayList<>(plugin.getConfig().getKeys(false));
@@ -187,8 +196,8 @@ public class ConfigGui {
         int size        = rows * 9;
 
         String lastKey = path.contains(".")
-            ? path.substring(path.lastIndexOf('.') + 1)
-            : path;
+                ? path.substring(path.lastIndexOf('.') + 1)
+                : path;
         String sTitle = DISPLAY_NAMES.getOrDefault(lastKey, formatKey(lastKey));
 
         Inventory inv = Bukkit.createInventory(null, size, "§8[§bTLS§8] §f" + sTitle);
@@ -206,10 +215,10 @@ public class ConfigGui {
 
         // Breadcrumb header
         inv.setItem(4, decor(Material.MAP,
-            "§b§l" + sTitle,
-            "§8§m──────────────────────────",
-            "§8Caminho: §7" + path,
-            "§8§m──────────────────────────"
+                "§b§l" + sTitle,
+                "§8§m──────────────────────────",
+                "§8Caminho: §7" + path,
+                "§8§m──────────────────────────"
         ));
 
         // Back + Close buttons (bottom row)
