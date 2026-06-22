@@ -4,6 +4,7 @@ import com.tlsplugin.Tlsplugin;
 import com.tlsplugin.manager.GameFreezeManager;
 import com.tlsplugin.manager.MVPStatsManager;
 import org.bukkit.Bukkit;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -129,7 +130,10 @@ public class PvPListener implements Listener {
         if (plugin.isLobbyWorld(p.getWorld())) return;
         if (freezeManager.isFrozen()) return;
         double amount = e.getAmount();
-        if (amount <= 0) return;
+        // Não notificar valores irrelevantes (0.0, 0.5, etc.) ou se já está full vida
+        if (amount <= 0.5) return;
+        double maxHealth = p.getAttribute(Attribute.MAX_HEALTH).getValue();
+        if (p.getHealth() >= maxHealth) return;
         int dec = plugin.getConfig().getInt("pvp_decimais", 1);
         String formatted = format(amount, dec);
 

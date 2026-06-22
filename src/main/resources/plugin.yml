@@ -1,5 +1,5 @@
 name: tlsplugin
-version: "3.13.8"
+version: "3.14"
 main: com.tlsplugin.Tlsplugin
 api-version: "1.21"
 author: "ArrozNaTwitch"
@@ -75,7 +75,11 @@ commands:
     usage: /tlspawn
   tlssign:
     description: Gestão de placas interativas com permissão
-    usage: /tlssign <set|remove|list|info> [args]
+    usage: /tlssign <cor|set|remove|list|info> [args]
+    permission: tls.admin
+  tlscapsulas:
+    description: "Gera cápsulas 3x3 para todas as equipas, com spawn e placa automáticos."
+    usage: /tlscapsulas <world> [x y z]
     permission: tls.admin
   tlsteams:
     description: Dá os 8 blocos de lã para escolha de equipa

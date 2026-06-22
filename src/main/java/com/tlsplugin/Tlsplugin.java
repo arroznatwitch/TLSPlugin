@@ -1,11 +1,11 @@
 package com.tlsplugin;
 
+import com.tlsplugin.manager.*;
 import com.tlsplugin.command.*;
 import com.tlsplugin.gui.ConfigGui;
 import com.tlsplugin.gui.ConfigGuiListener;
 import com.tlsplugin.gui.CraftBookGui;
 import com.tlsplugin.listeners.*;
-import com.tlsplugin.manager.*;
 import com.tlsplugin.utils.GrapplerItem;
 import com.tlsplugin.utils.KitMedicRecipe;
 import com.tlsplugin.utils.RecipeUnlocker;
@@ -46,6 +46,7 @@ public class Tlsplugin extends JavaPlugin {
     private ProntoCommand              prontoCommand;
     private ProximityAlertListener     proximityAlertListener;
     private TeamManager                teamManager;
+    private CapsuleManager             capsuleManager;
 
     @Override
     public void onEnable() {
@@ -191,8 +192,11 @@ public class Tlsplugin extends JavaPlugin {
         getCommand("tlspawn").setExecutor(new TpSpawnCommand(this, spawnManager));
         getCommand("tlsworld").setExecutor(new WorldCommand(this));
         SignManager signManager = new SignManager(this);
-        getCommand("tlssign").setExecutor(new TlsSignCommand(this, signManager));
+        getCommand("tlssign").setExecutor(new TlsSignCommand(this, signManager, spawnManager));
         Bukkit.getPluginManager().registerEvents(new com.tlsplugin.listeners.SignListener(this, signManager), this);
+        // TLSCapsulas: gera cápsulas por equipa e auto-configura os spawns (SpawnManager).
+        this.capsuleManager = new CapsuleManager(this, spawnManager);
+        getCommand("tlscapsulas").setExecutor(new TlsCapsulasCommand(this, capsuleManager));
         getCommand("tlsteams").setExecutor(new TeamsCommand(this));
         Bukkit.getPluginManager().registerEvents(new com.tlsplugin.listeners.TeamWoolListener(this), this);
         ConfigGui configGui = new ConfigGui(this);
@@ -290,4 +294,5 @@ public class Tlsplugin extends JavaPlugin {
     public PlayerPauseManager getPauseManager()                    { return pauseManager; }
     public ProntoCommand getProntoCommand()                        { return prontoCommand; }
     public TeamManager getTeamManager()                            { return teamManager; }
+    public CapsuleManager getCapsuleManager()                      { return capsuleManager; }
 }

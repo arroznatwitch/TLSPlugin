@@ -4,18 +4,34 @@ import com.tlsplugin.Tlsplugin;
 import dev.lone.itemsadder.api.CustomStack;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+
+import java.util.Set;
 
 public class StartGameCommand implements CommandExecutor {
 
     private final Tlsplugin plugin;
 
-
+    // Tipos de mob hostil que devem ser eliminados no início do jogo.
+    private static final Set<EntityType> HOSTILE = Set.of(
+            EntityType.ZOMBIE, EntityType.SKELETON, EntityType.CREEPER, EntityType.SPIDER,
+            EntityType.CAVE_SPIDER, EntityType.ENDERMAN, EntityType.WITCH, EntityType.SLIME,
+            EntityType.MAGMA_CUBE, EntityType.BLAZE, EntityType.GHAST, EntityType.WITHER_SKELETON,
+            EntityType.ZOMBIE_VILLAGER, EntityType.HUSK, EntityType.STRAY, EntityType.DROWNED,
+            EntityType.PHANTOM, EntityType.PILLAGER, EntityType.RAVAGER, EntityType.VINDICATOR,
+            EntityType.EVOKER, EntityType.VEX, EntityType.WARDEN, EntityType.BOGGED,
+            EntityType.BREEZE, EntityType.ELDER_GUARDIAN, EntityType.GUARDIAN,
+            EntityType.PIGLIN_BRUTE, EntityType.HOGLIN, EntityType.ZOGLIN,
+            EntityType.ENDERMITE, EntityType.SILVERFISH, EntityType.SHULKER
+    );
 
     public StartGameCommand(Tlsplugin plugin) {
         this.plugin = plugin;
@@ -40,8 +56,6 @@ public class StartGameCommand implements CommandExecutor {
             return true;
         }
 
-        plugin.getBorderManager().startCycle();
-        plugin.getBorderTimerAnnouncer().start();
         plugin.getMVPStatsManager().resetAll();
         for (Player online : Bukkit.getOnlinePlayers()) {
             plugin.getMVPStatsManager().registerPlayer(online.getName());
@@ -64,8 +78,22 @@ public class StartGameCommand implements CommandExecutor {
             p.setSaturation(20f);
         }
 
+        // Mata mobs hostis e define o dia — ANTES do countdown, enquanto os jogadores
+        // ainda estão frozen nas cápsulas. A borda SÓ começa depois do countdown acabar.
+        killHostileMobs();
+        setDayOnEventWorld();
+
         plugin.getFreezeManager().freezeForStart();
         plugin.getFreezeManager().startCountdown(() -> {
+            // A borda começa AQUI — só quando o "COMEÇOU, BOA SORTE!" aparece.
+            plugin.getBorderManager().startCycle();
+            plugin.getBorderTimerAnnouncer().start();
+
+            // Parte as cápsulas quando o jogo começa
+            if (plugin.getCapsuleManager() != null) {
+                plugin.getCapsuleManager().breakAll();
+            }
+
             for (Player p : Bukkit.getOnlinePlayers()) {
                 if (p.isOp()) continue;
                 p.setGameMode(GameMode.SURVIVAL);
@@ -82,6 +110,23 @@ public class StartGameCommand implements CommandExecutor {
         sender.sendMessage("  §7Total de fases: §f" + plugin.getBorderManager().getTotalStages());
         sender.sendMessage("");
         return true;
+    }
+
+    /** Mata todos os mobs hostis no mundo do evento. */
+    private void killHostileMobs() {
+        World eventWorld = plugin.getBorderManager().getTargetWorld();
+        if (eventWorld == null) return;
+        for (Entity e : eventWorld.getEntities()) {
+            if (e instanceof Player) continue;
+            if (HOSTILE.contains(e.getType())) e.remove();
+        }
+    }
+
+    /** Define o tempo como dia no mundo do evento. */
+    private void setDayOnEventWorld() {
+        World eventWorld = plugin.getBorderManager().getTargetWorld();
+        if (eventWorld == null) return;
+        eventWorld.setTime(1000L); // 1000 = meio da manhã
     }
 
     private void giveCraftBook(Player p) {

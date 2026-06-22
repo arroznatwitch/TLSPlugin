@@ -3,6 +3,8 @@ package com.tlsplugin.command;
 import com.tlsplugin.Tlsplugin;
 import com.tlsplugin.manager.SignManager;
 import com.tlsplugin.manager.SignManager.SignData;
+import com.tlsplugin.manager.SpawnManager;
+import com.tlsplugin.utils.TeamWoolItem;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
@@ -16,12 +18,14 @@ import java.util.List;
 
 public class TlsSignCommand implements CommandExecutor {
 
-    private final Tlsplugin   plugin;
-    private final SignManager signManager;
+    private final Tlsplugin    plugin;
+    private final SignManager  signManager;
+    private final SpawnManager spawnManager;
 
-    public TlsSignCommand(Tlsplugin plugin, SignManager signManager) {
-        this.plugin      = plugin;
-        this.signManager = signManager;
+    public TlsSignCommand(Tlsplugin plugin, SignManager signManager, SpawnManager spawnManager) {
+        this.plugin       = plugin;
+        this.signManager  = signManager;
+        this.spawnManager = spawnManager;
     }
 
     @Override
@@ -33,6 +37,12 @@ public class TlsSignCommand implements CommandExecutor {
 
         if (args.length == 0) { sendHelp(sender); return true; }
 
+        // Atalho: /tlssign <cor> → liga a placa que estás a olhar ao spawn dessa equipa.
+        if (args.length == 1 && isTeamColor(args[0])) {
+            handleLink(sender, args[0]);
+            return true;
+        }
+
         switch (args[0].toLowerCase()) {
             case "set"    -> handleSet(sender, args);
             case "remove" -> handleRemove(sender, args);
@@ -41,6 +51,49 @@ public class TlsSignCommand implements CommandExecutor {
             default       -> sendHelp(sender);
         }
         return true;
+    }
+
+    // ── /tlssign <cor> ───────────────────────────────────────────────────────
+    // Atalho que liga a placa olhada ao spawn da equipa (que o /tlscapsulas ou
+    // o /tls setspawn já definiram no centro da cápsula). Equivale a:
+    //   /tlssign set spawn_<cor> tls.team.<cor> tlspawn
+
+    private void handleLink(CommandSender sender, String color) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(prefix() + "§cApenas jogadores podem registar placas (tem de estar a olhar para a placa).");
+            return;
+        }
+        color = color.toLowerCase();
+
+        Block targetBlock = player.getTargetBlockExact(5);
+        if (targetBlock == null || !targetBlock.getType().name().contains("SIGN")) {
+            sender.sendMessage(prefix() + "§cOlha para uma placa (distância máx. 5 blocos).");
+            return;
+        }
+
+        String id   = "spawn_" + color;
+        String perm = "tls.team." + color;
+        String cmd  = "tlspawn";
+
+        if (!spawnManager.hasSpawn(color)) {
+            sender.sendMessage(prefix() + "§e⚠ A equipa §b" + color + " §eainda não tem spawn definido.");
+            sender.sendMessage(prefix() + "§7Corre §b/tlscapsulas <world> §7ou §b/tls setspawn " + color + " §7para o definir.");
+            sender.sendMessage(prefix() + "§7A placa fica registada na mesma e funcionará assim que o spawn existir.");
+        }
+
+        Location loc = targetBlock.getLocation();
+        signManager.addSign(id, loc, perm,
+                Collections.singletonList(cmd), Collections.emptyList(),
+                "§cNão tens permissão para usar esta placa.");
+
+        sender.sendMessage("§8§m──────────────────────────────");
+        sender.sendMessage(prefix() + "§a✔ Placa ligada à equipa §b" + color + "§a!");
+        sender.sendMessage("§7ID§8:          §b" + id);
+        sender.sendMessage("§7Permissão§8:   §b" + perm);
+        sender.sendMessage("§7Comando§8:     §btlspawn §7(leva ao spawn da própria equipa)");
+        sender.sendMessage("§7Localização§8: §e" + loc.getBlockX() + " " + loc.getBlockY() + " " + loc.getBlockZ()
+                + " §7(" + loc.getWorld().getName() + ")");
+        sender.sendMessage("§8§m──────────────────────────────");
     }
 
     // ── /tlssign set <id> <permissão> <comando...> ───────────────────────────
@@ -157,13 +210,22 @@ public class TlsSignCommand implements CommandExecutor {
         sender.sendMessage("§8§m────────────────────────────────────────");
         sender.sendMessage("§b§lTLS §8▸ §fGestão de Placas");
         sender.sendMessage("§8§m────────────────────────────────────────");
+        sender.sendMessage("§b/tlssign §e<cor>                 §8▸ §7Liga a placa ao spawn da equipa");
         sender.sendMessage("§b/tlssign set §e<id> <perm> <cmd> §8▸ §7Olha para a placa e regista");
         sender.sendMessage("§b/tlssign remove §e<id>           §8▸ §7Remove uma placa");
         sender.sendMessage("§b/tlssign list                    §8▸ §7Lista todas as placas");
         sender.sendMessage("§b/tlssign info §e<id>             §8▸ §7Detalhes de uma placa");
         sender.sendMessage("§8§m────────────────────────────────────────");
+        sender.sendMessage("§7Cores§8: §bred §8| §bblue §8| §bgreen §8| §byellow §8| §bpink §8| §bgrey §8| §bpurple §8| §borange");
         sender.sendMessage("§7Prefixo §b!§7 no comando = consola. Ex: §b!tls tp red");
         sender.sendMessage("§7Usa §b.§7 como permissão = sem restrição.");
+    }
+
+    private boolean isTeamColor(String s) {
+        for (String t : TeamWoolItem.allTeams()) {
+            if (t.equalsIgnoreCase(s)) return true;
+        }
+        return false;
     }
 
     private String prefix() { return "§f[§bTLS§f] "; }
