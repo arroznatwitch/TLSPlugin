@@ -193,11 +193,11 @@ public class BorderManager implements Listener {
                 plugin.getFreezeManager().freezeAll();
                 String msg = lastExitWasSafe
                         ? plugin.getConfig().getString(
-                                "mensagens_comandos.restart_aviso",
-                                "§e[TLS] ⚠ O servidor reiniciou. O jogo está §lPAUSADO§e. Use §f/unpause §epara retomar.")
+                        "mensagens_comandos.restart_aviso",
+                        "§e[TLS] ⚠ O servidor reiniciou. O jogo está §lPAUSADO§e. Use §f/unpause §epara retomar.")
                         : plugin.getConfig().getString(
-                                "mensagens_comandos.crash_aviso",
-                                "§c[TLS] ⚠ O servidor caiu inesperadamente. O jogo está §lPAUSADO§c. Use §f/unpause §cpara retomar.");
+                        "mensagens_comandos.crash_aviso",
+                        "§c[TLS] ⚠ O servidor caiu inesperadamente. O jogo está §lPAUSADO§c. Use §f/unpause §cpara retomar.");
                 Tlsplugin.broadcast(msg);
                 crashDetected = false;
             }, 20L);
@@ -214,8 +214,7 @@ public class BorderManager implements Listener {
         this.paused       = false;
         this.bordaSetada  = true;
         saveState();
-        broadcastFormatted(plugin.getConfig().getString("mensagens.borda_terminou"),
-                currentStageIndex + 1, stages.size(), size, 0);
+        plugin.getLogger().info("[TLS] Borda inicial definida: " + size + " (mundo: " + w.getName() + ")");
         applyGameRulesForStage(1);
     }
 
@@ -230,6 +229,9 @@ public class BorderManager implements Listener {
         currentStageIndex = 0;
         this.paused = false;
         saveState();
+
+        plugin.getLogger().info("[TLS] startCycle() chamado — mundo: " + getTargetWorld().getName()
+                + " | stages: " + stages.size() + " | shrinkSec: " + getShrinkSeconds());
 
         broadcastFormatted(plugin.getConfig().getString("mensagens.borda_inicio"),
                 currentStageIndex + 1, stages.size(), stages.get(currentStageIndex + 1),
@@ -256,6 +258,8 @@ public class BorderManager implements Listener {
         int shrinkSeconds  = getShrinkSeconds();
 
         World w = getTargetWorld();
+        plugin.getLogger().info("[TLS] scheduleNextShrink() → de " + w.getWorldBorder().getSize()
+                + " para " + to + " em " + shrinkSeconds + "s | mundo: " + w.getName());
         w.getWorldBorder().setCenter(0, 0);
         w.getWorldBorder().setSize(to, shrinkSeconds);
         this.remainingShrinkSeconds = shrinkSeconds;

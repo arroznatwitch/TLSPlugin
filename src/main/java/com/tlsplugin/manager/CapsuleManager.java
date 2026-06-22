@@ -105,7 +105,7 @@ public class CapsuleManager {
             int configZ = toInt(pos.get("z"), 0);
 
             // Encontra posição sólida próxima (procura em espiral se for água/ar)
-            int[] solid = findSolidNearby(world, configX, configZ, defaultY, autoY);
+            int[] solid = findSolidNearby(world, configX, configZ, defaultY, autoY, team);
             int x = solid[0];
             int y = solid[1];
             int z = solid[2];
@@ -212,45 +212,68 @@ public class CapsuleManager {
     // ── Procura de terreno sólido ─────────────────────────────────────────────
 
     /**
-     * Encontra posição sólida próxima de (configX, configZ), movendo-se SEMPRE
-     * em direção ao (0,0) — nunca se afasta das coordenadas originais.
-     * Se tiver de mover, avisa os OPs online.
-     * Devolve {x, y, z} da posição encontrada, ou o ponto original com defaultY se falhar.
+     * Encontra posição sólida próxima de (configX, configZ), priorizando sempre
+     * a direção do (0,0). Raio máximo de 75 blocos.
+     * Se tiver de mover, avisa os OPs com a cor da cápsula e as coordenadas.
+     * Nunca coloca a cápsula em cima de água.
      */
-    private int[] findSolidNearby(World world, int configX, int configZ, int defaultY, boolean autoY) {
-        int maxSteps = 20;
+    private int[] findSolidNearby(World world, int configX, int configZ, int defaultY, boolean autoY, String team) {
+        int maxRadius = 75;
 
-        // Direção para o centro: sinal oposto às coordenadas originais
-        int stepX = configX == 0 ? 0 : (configX > 0 ? -1 : 1);
-        int stepZ = configZ == 0 ? 0 : (configZ > 0 ? -1 : 1);
+        // Direção preferida: em direção ao (0,0)
+        int prefX = configX == 0 ? 0 : (configX > 0 ? -1 : 1);
+        int prefZ = configZ == 0 ? 0 : (configZ > 0 ? -1 : 1);
 
-        for (int step = 0; step <= maxSteps; step++) {
-            int x = configX + stepX * step;
-            int z = configZ + stepZ * step;
-            if (!world.isChunkLoaded(x >> 4, z >> 4)) world.getChunkAt(x >> 4, z >> 4);
-            int y = getSolidY(world, x, z, defaultY, autoY);
-            if (y >= 0) {
-                // Se teve de mover, avisa OPs
-                if (step > 0) {
-                    String msg = "§f[§bTLS§f] §e⚠ Cápsula movida §7(" + configX + "," + configZ
-                            + "§7) §e→ §7(" + x + "," + z + ") §7— terreno sólido mais próximo do centro.";
-                    for (org.bukkit.entity.Player p : org.bukkit.Bukkit.getOnlinePlayers()) {
-                        if (p.isOp()) p.sendMessage(msg);
-                    }
-                    plugin.getLogger().info("[TLS] Cápsula reposicionada: (" + configX + "," + configZ
-                            + ") → (" + x + "," + z + ")");
+        // Para cada raio, tenta primeiro na diagonal do (0,0), depois o anel completo
+        for (int radius = 0; radius <= maxRadius; radius++) {
+            // Lista de candidatos ordenados: diagonal preferida primeiro, depois o resto do anel
+            List<int[]> candidates = new ArrayList<>();
+
+            // Diagonal preferida no topo da lista
+            if (radius > 0) {
+                candidates.add(new int[]{configX + prefX * radius, configZ + prefZ * radius});
+            } else {
+                candidates.add(new int[]{configX, configZ});
+            }
+
+            // Resto do anel
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (Math.abs(dx) != radius && Math.abs(dz) != radius) continue;
+                    if (dx == prefX * radius && dz == prefZ * radius) continue; // já está
+                    candidates.add(new int[]{configX + dx, configZ + dz});
                 }
-                return new int[]{x, y, z};
+            }
+
+            for (int[] cand : candidates) {
+                int x = cand[0], z = cand[1];
+                if (!world.isChunkLoaded(x >> 4, z >> 4)) world.getChunkAt(x >> 4, z >> 4);
+                int y = getSolidY(world, x, z, defaultY, autoY);
+                if (y >= 0) {
+                    if (radius > 0) {
+                        String color = "§f" + team;
+                        String msg = "§f[§bTLS§f] §e⚠ Cápsula §b" + team + " §emovida §7("
+                                + configX + "," + configZ + ")§e → §7(" + x + "," + z
+                                + ") §7(+" + radius + " blocos do centro)";
+                        for (org.bukkit.entity.Player p : org.bukkit.Bukkit.getOnlinePlayers()) {
+                            if (p.isOp()) p.sendMessage(msg);
+                        }
+                        plugin.getLogger().info("[TLS] Cápsula " + team + " reposicionada: ("
+                                + configX + "," + configZ + ") → (" + x + "," + z + ") raio=" + radius);
+                    }
+                    return new int[]{x, y, z};
+                }
             }
         }
 
-        // Fallback: usa posição original com defaultY e avisa OPs
-        String msg = "§f[§bTLS§f] §c⚠ Cápsula em (" + configX + "," + configZ
-                + ") não encontrou terreno sólido! Usou Y=" + defaultY + ".";
+        // Fallback total — avisa OPs
+        String msg = "§f[§bTLS§f] §c⚠ Cápsula §b" + team + " §cnão encontrou terreno sólido em "
+                + maxRadius + " blocos! Usou Y=" + defaultY + " nas coords originais.";
         for (org.bukkit.entity.Player p : org.bukkit.Bukkit.getOnlinePlayers()) {
             if (p.isOp()) p.sendMessage(msg);
         }
-        plugin.getLogger().warning("[TLS] Sem terreno sólido para cápsula em (" + configX + "," + configZ + ")");
+        plugin.getLogger().warning("[TLS] Sem terreno para cápsula " + team
+                + " em (" + configX + "," + configZ + ")");
         return new int[]{configX, defaultY, configZ};
     }
 
