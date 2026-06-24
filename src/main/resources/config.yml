@@ -140,6 +140,8 @@ game:
     locator_bar: false
     doDaylightCycle: false
     doWeatherCycle: false
+    do_insomnia: false
+
 
 
 
@@ -561,3 +563,49 @@ spectator:
   restringir_mesma_equipa: true
   mensagem_desativado: "§f[§bTLS§f] §cNão podes espiar jogadores."
   mensagem_equipa_errada: "§f[§bTLS§f] §cNão podes espiar jogadores de outras equipas."
+
+# --- TLSCapsulas (geração automática de cápsulas por equipa) ---
+tlscapsulas:
+  frente: "SOUTH"
+  altura_interior: 2
+  auto_y: true
+  default_y: 64
+
+  modos:
+    teste:
+      posicoes:
+        - x: -2250
+          z: -2250
+        - x: 0
+          z: -2250
+        - x: 2250
+          z: -2250
+        - x: 2250
+          z: 0
+        - x: 2250
+          z: 2250
+        - x: 0
+          z: 2250
+        - x: -2250
+          z: 2250
+        - x: -2250
+          z: 0
+
+    final:
+      posicoes:
+        - x: -4750
+          z: -4750
+        - x: 0
+          z: -4750
+        - x: 4750
+          z: -4750
+        - x: 4750
+          z: 0
+        - x: 4750
+          z: 4750
+        - x: 0
+          z: 4750
+        - x: -4750
+          z: 4750
+        - x: -4750
+          z: 0

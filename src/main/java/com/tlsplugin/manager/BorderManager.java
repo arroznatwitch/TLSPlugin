@@ -369,6 +369,8 @@ public class BorderManager implements Listener {
             // Configuráveis pelo config.yml
             world.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, announceAdvancements);
             world.setGameRule(GameRule.DO_IMMEDIATE_RESPAWN,  doImmediateRespawn);
+            world.setGameRule(GameRule.DO_INSOMNIA, plugin.getConfig().getBoolean("game.gamerules.doInsomnia", false));
+
 
             // showDeathMessages: sempre false no Vanilla (o plugin faz a notificação)
             world.setGameRule(GameRule.SHOW_DEATH_MESSAGES,   false);
