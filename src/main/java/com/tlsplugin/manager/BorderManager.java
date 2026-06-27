@@ -319,6 +319,12 @@ public class BorderManager implements Listener {
                 currentStageIndex++;
                 paused = true;
 
+                // FIX PVP: sincroniza JÁ as gamerules com a nova fase.
+                // Antes só atualizava no scheduleNextShrink() DEPOIS da pausa, por isso
+                // a borda 2 ficava com pvp off durante a transição (e o restart "resolvia"
+                // porque o loadState() reaplica as regras no arranque).
+                applyGameRulesForStage(currentStageIndex + 1);
+
                 double nextTarget = (currentStageIndex < stages.size() - 1)
                         ? stages.get(currentStageIndex + 1)
                         : stages.get(currentStageIndex);
