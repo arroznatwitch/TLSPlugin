@@ -2,13 +2,17 @@ package com.tlsplugin.manager;
 
 import com.tlsplugin.Tlsplugin;
 import com.tlsplugin.utils.TeamWoolItem;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -121,6 +125,7 @@ public class CapsuleManager {
             spawnManager.setSpawn(team, spawn);
         }
 
+        saveState();   // persiste os centros pra sobreviver a restarts antes do start
         return new Result(built, modo, front);
     }
 
@@ -129,12 +134,54 @@ public class CapsuleManager {
      * Remove todos os blocos de concrete e vidro da cápsula, deixando só ar.
      */
     public void breakAll() {
+        // Se a memória está vazia (servidor reiniciou depois do generate()), recupera do disco.
+        if (lastWorld == null || capsuleCenters.isEmpty()) {
+            loadState();
+        }
         if (lastWorld == null || capsuleCenters.isEmpty()) return;
+
         int interiorH = Math.max(1, plugin.getConfig().getInt("tlscapsulas.altura_interior", 2));
         for (int[] center : capsuleCenters) {
             breakCapsule(lastWorld, center[0], center[1], center[2], interiorH);
         }
         plugin.getLogger().info("[TLS] " + capsuleCenters.size() + " cápsulas partidas.");
+    }
+
+    /** Limpa o estado persistido — chamar no reset/stop do jogo para não reaproveitar centros antigos. */
+    public void clearState() {
+        capsuleCenters.clear();
+        lastWorld = null;
+        File file = new File(plugin.getDataFolder(), "capsulas.yml");
+        if (file.exists()) file.delete();
+    }
+
+    private void saveState() {
+        File file = new File(plugin.getDataFolder(), "capsulas.yml");
+        YamlConfiguration yaml = new YamlConfiguration();
+        if (lastWorld != null) yaml.set("world", lastWorld.getName());
+        List<String> list = new ArrayList<>();
+        for (int[] c : capsuleCenters) list.add(c[0] + ";" + c[1] + ";" + c[2]);
+        yaml.set("centros", list);
+        try { yaml.save(file); } catch (IOException e) { e.printStackTrace(); }
+    }
+
+    private void loadState() {
+        File file = new File(plugin.getDataFolder(), "capsulas.yml");
+        if (!file.exists()) return;
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        String worldName = yaml.getString("world");
+        if (worldName != null) lastWorld = Bukkit.getWorld(worldName);
+        capsuleCenters.clear();
+        for (String s : yaml.getStringList("centros")) {
+            String[] parts = s.split(";");
+            if (parts.length == 3) {
+                capsuleCenters.add(new int[]{
+                        Integer.parseInt(parts[0]),
+                        Integer.parseInt(parts[1]),
+                        Integer.parseInt(parts[2])
+                });
+            }
+        }
     }
 
     // ── Construção ────────────────────────────────────────────────────────────
