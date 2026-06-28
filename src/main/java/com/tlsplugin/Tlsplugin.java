@@ -54,6 +54,7 @@ public class Tlsplugin extends JavaPlugin {
     private CapsuleManager             capsuleManager;
     private CenterCompassTask          centerCompassTask;
     private WeaponRangeListener        weaponRangeListener;
+    private SickleKnockbackListener    sickleKnockbackListener;
 
     @Override
     public void onEnable() {
@@ -93,6 +94,7 @@ public class Tlsplugin extends JavaPlugin {
         this.trackerCompassListener = new TrackerCompassListener(this);
         this.goldPotionListener     = new GoldPotionListener(this);
         this.weaponRangeListener    = new WeaponRangeListener(this);
+        this.sickleKnockbackListener = new SickleKnockbackListener(this);
 
         // ==== REGISTER LISTENERS ====
         Bukkit.getPluginManager().registerEvents(pvpListener,            this);
@@ -103,6 +105,7 @@ public class Tlsplugin extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(grapplerItemListener,   this);
         Bukkit.getPluginManager().registerEvents(goldPotionListener,     this);
         Bukkit.getPluginManager().registerEvents(weaponRangeListener,    this);
+        Bukkit.getPluginManager().registerEvents(sickleKnockbackListener, this);
         Bukkit.getPluginManager().registerEvents(new CraftBookListener(), this);
         Bukkit.getPluginManager().registerEvents(new MobDropListener(this), this);
 
