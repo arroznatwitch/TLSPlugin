@@ -10,6 +10,7 @@ import com.tlsplugin.utils.GrapplerItem;
 import com.tlsplugin.utils.KitMedicRecipe;
 import com.tlsplugin.utils.RecipeUnlocker;
 import com.tlsplugin.utils.SpecialAppleRecipe;
+import dev.lone.itemsadder.api.CustomStack;
 import dev.lone.itemsadder.api.Events.ItemsAdderLoadDataEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -22,11 +23,15 @@ import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.WorldLoadEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class Tlsplugin extends JavaPlugin {
 
     private static Tlsplugin instance;
+
+    /** ID do livro de receitas (item do ItemsAdder já existente). */
+    private static final String CRAFT_BOOK_ID = "tls_plugin:craft_book";
 
     private BorderManager              borderManager;
     private SpawnManager               spawnManager;
@@ -47,6 +52,8 @@ public class Tlsplugin extends JavaPlugin {
     private ProximityAlertListener     proximityAlertListener;
     private TeamManager                teamManager;
     private CapsuleManager             capsuleManager;
+    private CenterCompassTask          centerCompassTask;
+    private WeaponRangeListener        weaponRangeListener;
 
     @Override
     public void onEnable() {
@@ -85,6 +92,7 @@ public class Tlsplugin extends JavaPlugin {
         this.spectatorListener      = new SpectatorInspectListener();
         this.trackerCompassListener = new TrackerCompassListener(this);
         this.goldPotionListener     = new GoldPotionListener(this);
+        this.weaponRangeListener    = new WeaponRangeListener(this);
 
         // ==== REGISTER LISTENERS ====
         Bukkit.getPluginManager().registerEvents(pvpListener,            this);
@@ -94,6 +102,7 @@ public class Tlsplugin extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(trackerCompassListener, this);
         Bukkit.getPluginManager().registerEvents(grapplerItemListener,   this);
         Bukkit.getPluginManager().registerEvents(goldPotionListener,     this);
+        Bukkit.getPluginManager().registerEvents(weaponRangeListener,    this);
         Bukkit.getPluginManager().registerEvents(new CraftBookListener(), this);
         Bukkit.getPluginManager().registerEvents(new MobDropListener(this), this);
 
@@ -121,8 +130,24 @@ public class Tlsplugin extends JavaPlugin {
                 mvpStatsManager.registerPlayer(e.getPlayer().getName());
                 goldPotionListener.applyBaseLore(e.getPlayer());
                 teamManager.syncPlayer(e.getPlayer());
-            }
 
+                // Ao entrar no servidor, garante que o jogador tem o livro CraftBook.
+                darCraftBook(e.getPlayer());
+
+                // Rejoin com jogo a decorrer: o mapa tls_evento1 força Adventure, mas quem
+                // estava a jogar deve voltar a Survival. Só converte Adventure→Survival;
+                // Criativo e Spectator ficam intactos. Delay de 3 ticks para correr DEPOIS
+                // do teleporte/gamemode que o mundo aplica no spawn.
+                Player jogador = e.getPlayer();
+                Bukkit.getScheduler().runTaskLater(Tlsplugin.this, () -> {
+                    if (!jogador.isOnline()) return;
+                    if (!borderManager.isRunning()) return;
+                    if (isLobbyWorld(jogador.getWorld())) return;
+                    if (jogador.getGameMode() == GameMode.ADVENTURE) {
+                        jogador.setGameMode(GameMode.SURVIVAL);
+                    }
+                }, 3L);
+            }
             @EventHandler
             public void onQuit(PlayerQuitEvent e) {
                 mvpStatsManager.unregisterPlayer(e.getPlayer().getName());
@@ -142,13 +167,26 @@ public class Tlsplugin extends JavaPlugin {
             @EventHandler
             public void onWorldChange(PlayerChangedWorldEvent e) {
                 Player p = e.getPlayer();
-                String lobby = getConfig().getString("mundo_lobby", "world");
+                String lobby  = getConfig().getString("mundo_lobby", "world");
+                String evento = getConfig().getString("mundo_evento", "tls_evento1");
+
                 if (p.isOp() && p.getWorld().getName().equals(lobby)) {
                     Bukkit.getScheduler().runTaskLater(Tlsplugin.this, () -> {
                         if (p.isOnline() && p.getWorld().getName().equals(lobby)) {
                             p.setGameMode(GameMode.CREATIVE);
                         }
                     }, 2L);
+                }
+
+                // Ao ENTRAR no mundo de evento: limpa o inventário e dá o CraftBook de novo.
+                // Só limpa jogadores não-OP (protege staff/admins que estejam a montar o mapa).
+                // ATENÇÃO: isto limpa sempre que um jogador atravessa para o tls_evento1 — se
+                // alguém sair e voltar a entrar no mundo a meio do jogo, perde o inventário.
+                if (p.getWorld().getName().equalsIgnoreCase(evento)) {
+                    if (!p.isOp()) {
+                        p.getInventory().clear();
+                    }
+                    darCraftBook(p);
                 }
             }
         }, this);
@@ -159,9 +197,14 @@ public class Tlsplugin extends JavaPlugin {
         for (Player p : Bukkit.getOnlinePlayers()) {
             mvpStatsManager.registerPlayer(p.getName());
             goldPotionListener.applyBaseLore(p);
+            darCraftBook(p);
         }
 
         pvpListener.startUpdater();
+
+        // Compass na action bar a apontar pro centro (0,0) — cede a vez ao grappler
+        this.centerCompassTask = new CenterCompassTask(this, grapplerItemListener);
+        this.centerCompassTask.start();
 
         // Auto-save MVP a cada minuto
         Bukkit.getScheduler().runTaskTimer(this, () -> {
@@ -212,6 +255,25 @@ public class Tlsplugin extends JavaPlugin {
         getLogger().info("TLSPlugin ativado.");
     }
 
+    /**
+     * Dá o livro de receitas (tls_plugin:craft_book) ao jogador, mas só se ainda não o tiver,
+     * para não duplicar em reconexões. Usa o item do ItemsAdder já existente.
+     */
+    private void darCraftBook(Player p) {
+        // Já tem o livro? não dá outro.
+        for (ItemStack it : p.getInventory().getContents()) {
+            CustomStack cs = CustomStack.byItemStack(it);
+            if (cs != null && CRAFT_BOOK_ID.equals(cs.getNamespacedID())) return;
+        }
+        CustomStack book = CustomStack.getInstance(CRAFT_BOOK_ID);
+        if (book != null) {
+            p.getInventory().addItem(book.getItemStack());
+        } else {
+            getLogger().warning("Não consegui dar o craft_book: item '" + CRAFT_BOOK_ID
+                    + "' não encontrado (ItemsAdder ainda não carregou?).");
+        }
+    }
+
     private void registerCustomRecipes() {
         SpecialAppleRecipe.register(this);
         KitMedicRecipe.register(this);
@@ -232,6 +294,11 @@ public class Tlsplugin extends JavaPlugin {
             teamManager.ensureTeamsExist();
             for (Player p : Bukkit.getOnlinePlayers()) teamManager.syncPlayer(p);
         }
+
+        // Se quiseres que /tlsreload force regenerar as cápsulas do zero, descomenta a linha
+        // abaixo. ATENÇÃO: só apaga o capsulas.yml — tens de voltar a correr /tlscapsulas a seguir.
+        // Durante um evento é mais seguro deixar comentado para o reload NÃO mexer nas cápsulas.
+        // if (capsuleManager != null) capsuleManager.clearState();
     }
 
     public boolean isSoloMode() {
@@ -280,6 +347,7 @@ public class Tlsplugin extends JavaPlugin {
         if (mvpStatsManager != null) mvpStatsManager.saveStats();
         if (trackerCompassListener != null) trackerCompassListener.cleanup();
         if (grapplerItemListener   != null) grapplerItemListener.cleanup();
+        if (centerCompassTask      != null) centerCompassTask.stop();
         getLogger().info("TLSPlugin desativado.");
     }
 

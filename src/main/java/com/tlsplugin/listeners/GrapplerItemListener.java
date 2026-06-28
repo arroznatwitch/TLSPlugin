@@ -62,6 +62,14 @@ public class GrapplerItemListener implements Listener {
         return noFallDamage.containsKey(id);
     }
 
+    public boolean isShowingActionBar(Player p) {
+        ItemStack hand = p.getInventory().getItemInMainHand();
+        CustomStack handCustom = CustomStack.byItemStack(hand);
+        if (handCustom == null || !GRAPPLER_ID.equals(handCustom.getNamespacedID())) return false;
+        long expira = cooldowns.getOrDefault(p.getUniqueId(), 0L);
+        return System.currentTimeMillis() < expira;
+    }
+
     @EventHandler
     public void onUse(PlayerInteractEvent e) {
         if (e.getHand() != EquipmentSlot.HAND) return;

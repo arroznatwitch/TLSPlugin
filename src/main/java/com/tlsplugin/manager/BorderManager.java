@@ -22,6 +22,9 @@ import java.util.*;
 
 public class BorderManager implements Listener {
 
+    /** Mundo do evento — fixo. Tudo o que é da borda/PvP/gamerules do jogo acontece só aqui. */
+    public static final String EVENT_WORLD = "tls_evento1";
+
     private final Tlsplugin plugin;
     private List<Double> stages;
     private String targetWorldName = null;
@@ -82,27 +85,20 @@ public class BorderManager implements Listener {
         return plugin.getConfig().getString("modo_jogo", "final");
     }
 
+    /** Mundo do evento — sempre o tls_evento1 (mundo fixo do Multiverse). */
     public World getTargetWorld() {
-        if (targetWorldName != null) {
-            World w = Bukkit.getWorld(targetWorldName);
-            if (w != null) return w;
-        }
-        // Fallback: primeiro mundo que NÃO seja o lobby
-        String lobby = plugin.getConfig().getString("mundo_lobby", "world");
-        for (World w : Bukkit.getWorlds()) {
-            if (!w.getName().equalsIgnoreCase(lobby)) return w;
-        }
-        return Bukkit.getWorlds().get(0);
+        return Bukkit.getWorld(EVENT_WORLD);
     }
 
     public void setTargetWorld(World world) {
-        this.targetWorldName = world.getName();
-        plugin.getLogger().info("[TLS] Mundo alvo: " + targetWorldName);
-        saveState();
+        // Mantido por compatibilidade com chamadas antigas, mas o mundo do evento é sempre
+        // o tls_evento1. Não muda nada — o getTargetWorld() ignora isto de propósito.
+        this.targetWorldName = EVENT_WORLD;
+        plugin.getLogger().info("[TLS] Mundo alvo: " + EVENT_WORLD + " (fixo)");
     }
 
     public String getTargetWorldName() {
-        return getTargetWorld().getName();
+        return EVENT_WORLD;
     }
 
     /** Recarrega a lista de bordas do modo ativo — chamado após reloadConfig(). */
@@ -123,7 +119,7 @@ public class BorderManager implements Listener {
         yaml.set("currentStageIndex",      currentStageIndex);
         yaml.set("remainingShrinkSeconds", remainingShrinkSeconds);
         yaml.set("lastSafeExit",           false);
-        if (targetWorldName != null) yaml.set("targetWorldName", targetWorldName);
+        yaml.set("targetWorldName",        EVENT_WORLD);
         try { yaml.save(file); } catch (IOException e) { e.printStackTrace(); }
     }
 
@@ -135,9 +131,7 @@ public class BorderManager implements Listener {
         boolean wasRunning        = yaml.getBoolean("running",       false);
         boolean lastSafeExit      = yaml.getBoolean("lastSafeExit",  true);
 
-        if (yaml.contains("targetWorldName")) {
-            this.targetWorldName = yaml.getString("targetWorldName");
-        }
+        this.targetWorldName = EVENT_WORLD;
 
         if (wasRunning) {
             this.running              = true;
@@ -161,9 +155,7 @@ public class BorderManager implements Listener {
                         "[TLS] O servidor reiniciou com o jogo a decorrer. Jogo foi pausado, aguarda /unpause.");
             }
 
-            // CORREÇÃO: antes saltava para o tamanho do INÍCIO da fase (stages.get(currentStageIndex)),
-            // o que fazia a borda "voltar para trás" sempre que o servidor reiniciava/caía.
-            // Agora travamos no tamanho REAL onde a borda ficou (o Minecraft guarda o lerp em curso
+            // Trava no tamanho REAL onde a borda ficou (o Minecraft guarda o lerp em curso
             // no level.dat), preservando o progresso já feito.
             double frozenSize = w.getWorldBorder().getSize();
             w.getWorldBorder().setSize(frozenSize);
@@ -320,9 +312,6 @@ public class BorderManager implements Listener {
                 paused = true;
 
                 // FIX PVP: sincroniza JÁ as gamerules com a nova fase.
-                // Antes só atualizava no scheduleNextShrink() DEPOIS da pausa, por isso
-                // a borda 2 ficava com pvp off durante a transição (e o restart "resolvia"
-                // porque o loadState() reaplica as regras no arranque).
                 applyGameRulesForStage(currentStageIndex + 1);
 
                 double nextTarget = (currentStageIndex < stages.size() - 1)
@@ -359,35 +348,40 @@ public class BorderManager implements Listener {
         boolean isPvPActive = (stageNumber >= 2);
 
         plugin.getLogger().info("[TLS] Aplicando Regras - Estágio: " + stageNumber +
-                " | Pausado: " + paused + " | PvP Final: " + isPvPActive);
+                " | Pausado: " + paused + " | PvP permitido: " + isPvPActive);
 
         boolean announceAdvancements = plugin.getConfig().getBoolean("game.gamerules.announceAdvancements", false);
         boolean doImmediateRespawn   = plugin.getConfig().getBoolean("game.gamerules.doImmediateRespawn",   true);
         boolean showLocatorBar       = plugin.getConfig().getBoolean("game.gamerules.locator_bar",          false);
 
-        for (World world : Bukkit.getWorlds()) {
-            // PvP: false na 1ª borda, true a partir da 2ª
-            world.setPVP(isPvPActive);
-
-            // naturalRegen: true na 1ª borda, false a partir da 2ª
-            world.setGameRule(GameRule.NATURAL_REGENERATION, !isPvPActive);
-
-            // Configuráveis pelo config.yml
-            world.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, announceAdvancements);
-            world.setGameRule(GameRule.DO_IMMEDIATE_RESPAWN,  doImmediateRespawn);
-            world.setGameRule(GameRule.DO_INSOMNIA, plugin.getConfig().getBoolean("game.gamerules.doInsomnia", false));
-
-
-            // showDeathMessages: sempre false no Vanilla (o plugin faz a notificação)
-            world.setGameRule(GameRule.SHOW_DEATH_MESSAGES,   false);
-            world.setGameRule(GameRule.SEND_COMMAND_FEEDBACK, false);
+        World world = getTargetWorld();
+        if (world == null) {
+            plugin.getLogger().warning("[TLS] " + EVENT_WORLD + " não está carregado ao aplicar gamerules!");
+            return;
         }
 
-        // pvp via comando (compatibilidade extra)
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamerule pvp " + isPvPActive);
+        // A flag de PvP do mundo fica SEMPRE true, para os eventos de dano entre jogadores
+        // serem SEMPRE disparados. Quem decide se o PvP conta (por fase) é o PvPListener,
+        // em runtime — assim o Multiverse e o worlds.yml deixam de poder bloquear o PvP.
+        world.setPVP(true);
 
-        // locatorBar: configurável
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamerule locator_bar " + showLocatorBar);
+        // naturalRegen: true na 1ª borda, false a partir da 2ª
+        world.setGameRule(GameRule.NATURAL_REGENERATION, !isPvPActive);
+
+        world.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, announceAdvancements);
+        world.setGameRule(GameRule.DO_IMMEDIATE_RESPAWN,  doImmediateRespawn);
+        world.setGameRule(GameRule.DO_INSOMNIA, plugin.getConfig().getBoolean("game.gamerules.doInsomnia", false));
+        world.setGameRule(GameRule.SHOW_DEATH_MESSAGES,   false);
+        world.setGameRule(GameRule.SEND_COMMAND_FEEDBACK, false);
+
+        // locatorBar continua via comando (é gamerule a sério). O 'gamerule pvp' foi REMOVIDO:
+        // não existe como gamerule e nunca controlou PvP nenhum.
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
+                "execute in " + EVENT_WORLD + " run gamerule locator_bar " + showLocatorBar);
+    }
+
+    public boolean isPvPAllowed() {
+        return getCurrentStage() >= 2;
     }
 
     public void resetCurrentStage() {
@@ -522,9 +516,6 @@ public class BorderManager implements Listener {
     public void setPaused(boolean paused) {
         this.paused = paused;
         if (paused) {
-            // CORREÇÃO: antes chamava resetCurrentStage(), que saltava a borda de volta para o
-            // tamanho do INÍCIO da fase e reiniciava o tempo todo. Agora só travamos a borda no
-            // tamanho onde ela está NESTE momento, sem perder o progresso do shrink.
             World w = getTargetWorld();
             double currentSize = w.getWorldBorder().getSize();
             w.getWorldBorder().setSize(currentSize);
