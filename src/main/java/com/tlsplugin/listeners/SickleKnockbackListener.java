@@ -12,15 +12,17 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 /**
- * Knockback inverso da Sickle: puxa o alvo para o atacante em vez de o empurrar.
+ * Knockback inverso da Sickle: por probabilidade, puxa o alvo para o atacante.
  *
- * Configuravel no config.yml:
+ * Configuravel no config.yml (lido a cada hit, por isso /tlsreload aplica logo):
  *   sickle:
- *     pull: 0.6     # forca do puxao (tem de ser > ~0.4 para vencer o knockback vanilla)
- *     debug: false  # loga no console quando deteta um hit da Sickle
+ *     pull: 0.6      # forca do puxao (tem de ser > ~0.4 para vencer o knockback vanilla)
+ *     chance: 0.15   # probabilidade de puxar por hit (0.0 a 1.0). 0.15 = 15%
+ *     debug: false
  *
- * Os valores sao lidos a cada hit, por isso /tlsreload aplica logo sem reiniciar.
  * O atributo attack_knockback do Minecraft tem minimo 0 (nao aceita negativos), por isso
  * isto tem mesmo de ser feito por codigo.
  */
@@ -41,13 +43,19 @@ public class SickleKnockbackListener implements Listener {
 
         if (!isSickle(attacker.getInventory().getItemInMainHand())) return;
 
-        final double pull = plugin.getConfig().getDouble("sickle.pull", 0.6);
-        final boolean debug = plugin.getConfig().getBoolean("sickle.debug", false);
+        final double  pull   = plugin.getConfig().getDouble("sickle.pull", 0.6);
+        final double  chance = plugin.getConfig().getDouble("sickle.chance", 0.15);
+        final boolean debug  = plugin.getConfig().getBoolean("sickle.debug", false);
 
-        if (debug) {
-            plugin.getLogger().info("[Sickle] " + attacker.getName()
-                    + " acertou em " + victim.getName() + " — a puxar (pull=" + pull + ").");
+        // Probabilidade
+        if (ThreadLocalRandom.current().nextDouble() > chance) {
+            if (debug) plugin.getLogger().info("[Sickle] " + attacker.getName()
+                    + " — sem puxao (probabilidade " + (chance * 100) + "%).");
+            return;
         }
+
+        if (debug) plugin.getLogger().info("[Sickle] " + attacker.getName()
+                + " puxou " + victim.getName() + " (pull=" + pull + ").");
 
         // 1 tick depois, para sobrepor o knockback vanilla (que empurra para fora).
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
