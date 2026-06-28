@@ -566,6 +566,7 @@ spectator:
 
 sickle:
   pull: 0.6
+  chance: 0.15
   debug: false
 
 # --- TLSCapsulas (geração automática de cápsulas por equipa) ---
