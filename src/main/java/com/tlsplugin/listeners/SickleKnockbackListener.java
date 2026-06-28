@@ -13,17 +13,20 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
 /**
- * Knockback inverso da Sickle: em vez de empurrar o alvo, puxa-o para o atacante.
+ * Knockback inverso da Sickle: puxa o alvo para o atacante em vez de o empurrar.
  *
- * O atributo attack_knockback do Minecraft tem minimo 0 (nao aceita valores negativos),
- * por isso o puxao tem de ser feito por codigo. Sobrepoe o knockback vanilla 1 tick depois.
+ * Configuravel no config.yml:
+ *   sickle:
+ *     pull: 0.6     # forca do puxao (tem de ser > ~0.4 para vencer o knockback vanilla)
+ *     debug: false  # loga no console quando deteta um hit da Sickle
+ *
+ * Os valores sao lidos a cada hit, por isso /tlsreload aplica logo sem reiniciar.
+ * O atributo attack_knockback do Minecraft tem minimo 0 (nao aceita negativos), por isso
+ * isto tem mesmo de ser feito por codigo.
  */
 public class SickleKnockbackListener implements Listener {
 
     private final Tlsplugin plugin;
-
-    /** Forca do puxao (aprox. blocos/tick). Sobe para puxar mais forte. */
-    private static final double PULL = 0.25;
 
     public SickleKnockbackListener(Tlsplugin plugin) {
         this.plugin = plugin;
@@ -38,6 +41,14 @@ public class SickleKnockbackListener implements Listener {
 
         if (!isSickle(attacker.getInventory().getItemInMainHand())) return;
 
+        final double pull = plugin.getConfig().getDouble("sickle.pull", 0.6);
+        final boolean debug = plugin.getConfig().getBoolean("sickle.debug", false);
+
+        if (debug) {
+            plugin.getLogger().info("[Sickle] " + attacker.getName()
+                    + " acertou em " + victim.getName() + " — a puxar (pull=" + pull + ").");
+        }
+
         // 1 tick depois, para sobrepor o knockback vanilla (que empurra para fora).
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (victim.isDead() || !victim.isValid()) return;
@@ -47,8 +58,8 @@ public class SickleKnockbackListener implements Listener {
             dir.setY(0);
             if (dir.lengthSquared() < 1.0e-4) return; // praticamente em cima um do outro
 
-            dir.normalize().multiply(PULL);
-            dir.setY(0.1); // pequeno salto para nao ficar preso no chao
+            dir.normalize().multiply(pull);
+            dir.setY(0.15); // pequeno salto para nao ser comido pelo atrito do chao
             victim.setVelocity(dir);
         }, 1L);
     }
