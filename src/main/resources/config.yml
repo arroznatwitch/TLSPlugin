@@ -462,16 +462,16 @@ proximidade_fight:
 mob_gold_drop:
   habilitar: true
   mobs:
-    witch: 0.05
-    vindicator: 0.05
-    enderman: 0.04
-    pillager: 0.04
-    skeleton: 0.03
-    cave_spider: 0.03
-    creeper: 0.02
-    zombie: 0.015
-    spider: 0.01
-    default: 0.01
+    witch: 0.10
+    vindicator: 0.10
+    enderman: 0.08
+    pillager: 0.08
+    skeleton: 0.10
+    cave_spider: 0.06
+    creeper: 0.04
+    zombie: 0.05
+    spider: 0.05
+    default: 0.05
 
 # --- Anunciador de Bordas no Chat ---
 border_announcer:
