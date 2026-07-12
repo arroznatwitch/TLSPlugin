@@ -484,6 +484,13 @@ border_announcer:
   cor_futura: "§f"
   seta_atual: "▶ "
   prefixo_futuro: "  "
+  # Som tocado para todos os jogadores quando a mensagem de bordas é enviada
+  som:
+    habilitar: true
+    # Nome do Sound do Bukkit (ex: BLOCK_NOTE_BLOCK_PLING, BLOCK_NOTE_BLOCK_BELL, BLOCK_NOTE_BLOCK_CHIME)
+    tipo: "BLOCK_NOTE_BLOCK_PLING"
+    volume: 1.0
+    pitch: 1.0
 
 # --- Blocos de Equipa ---
 teams:

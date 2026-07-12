@@ -95,6 +95,28 @@ public class MVPStatsManager {
 
         public int calculateTotalMVPPoints(long totalPausedMs) {
             FileConfiguration config = Tlsplugin.getInstance().getConfig();
+            // OPs e jogadores com group.admin têm sempre 0 pontos (staff/árbitros)
+            boolean devMode = config.getBoolean("game.modo-desenvolvedor", false);
+            if (!devMode) {
+                org.bukkit.OfflinePlayer op = org.bukkit.Bukkit.getOfflinePlayer(playerName);
+                if (op.isOp()) return 0;
+                // Verificar group.admin via LuckPerms (só se estiver online — sem chamadas async aqui)
+                org.bukkit.entity.Player online = org.bukkit.Bukkit.getPlayer(playerName);
+                if (online != null) {
+                    var provider = org.bukkit.Bukkit.getServicesManager()
+                            .getRegistration(net.luckperms.api.LuckPerms.class);
+                    if (provider != null) {
+                        net.luckperms.api.model.user.User user =
+                                provider.getProvider().getUserManager().getUser(online.getUniqueId());
+                        if (user != null) {
+                            boolean isAdmin = user.getNodes(net.luckperms.api.node.NodeType.INHERITANCE)
+                                    .stream()
+                                    .anyMatch(n -> n.getGroupName().equalsIgnoreCase("admin"));
+                            if (isAdmin) return 0;
+                        }
+                    }
+                }
+            }
             int points = 0;
             points += calculateDDRDPoints();
             points += calculateTimePoints(totalPausedMs);
@@ -196,6 +218,21 @@ public class MVPStatsManager {
         if (!gameStarted || !isEligibleInternal(playerName)) return;
         PlayerStats stats = playerStats.get(playerName);
         if (stats != null) { stats.revivals++; stats.lastActivityTime = System.currentTimeMillis(); }
+    }
+
+    /**
+     * Chamado quando um jogador é revivido com sucesso.
+     * Limpa o deathTime e reinicia o joinTime para que o tempo vivo
+     * recomece a contar a partir do momento do revive.
+     */
+    public void onPlayerRevived(String revivedPlayerName) {
+        if (!gameStarted) return;
+        PlayerStats stats = playerStats.get(revivedPlayerName);
+        if (stats != null) {
+            stats.deathTime = 0;                                  // desbloqueia o timer
+            stats.joinTime  = System.currentTimeMillis();         // reinicia contagem de tempo vivo
+            stats.lastActivityTime = System.currentTimeMillis();
+        }
     }
 
     public PlayerStats getStats(String playerName) {

@@ -60,7 +60,8 @@ public class StartGameCommand implements CommandExecutor {
         for (Player online : Bukkit.getOnlinePlayers()) {
             plugin.getMVPStatsManager().registerPlayer(online.getName());
         }
-        plugin.getMVPStatsManager().startTracking();
+        // Nota: startTracking() é chamado dentro do callback do countdown,
+        // para que o timer de tempo vivo só comece quando o jogo REALMENTE começa.
 
         // Limpar lista de prontos ao iniciar
         if (plugin.getProntoCommand() != null) {
@@ -85,6 +86,9 @@ public class StartGameCommand implements CommandExecutor {
 
         plugin.getFreezeManager().freezeForStart();
         plugin.getFreezeManager().startCountdown(() -> {
+            // O timer de MVP começa AQUI — quando "COMEÇOU, BOA SORTE!" aparece.
+            plugin.getMVPStatsManager().startTracking();
+
             // A borda começa AQUI — só quando o "COMEÇOU, BOA SORTE!" aparece.
             plugin.getBorderManager().startCycle();
             plugin.getBorderTimerAnnouncer().start();

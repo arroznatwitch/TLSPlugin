@@ -132,12 +132,14 @@ public class TrackerCompassListener implements Listener {
     @EventHandler
     public void onItemChange(PlayerItemHeldEvent e) {
         Player p = e.getPlayer();
-        ItemStack oldItem = p.getInventory().getItem(e.getPreviousSlot());
-        if (oldItem != null) {
-            CustomStack custom = CustomStack.byItemStack(oldItem);
-            if (custom != null && COMPASS_ID.equals(custom.getNamespacedID())) {
-                stopTracking(p);
-            }
+        // Para o rastreamento só se o NOVO slot não for um tracker. Como podes ter
+        // vários trackers, trocar de um tracker para outro mantém o track ativo;
+        // só para mesmo quando deixas de segurar um tracker.
+        ItemStack newItem = p.getInventory().getItem(e.getNewSlot());
+        CustomStack custom = newItem != null ? CustomStack.byItemStack(newItem) : null;
+        boolean novoEhTracker = custom != null && COMPASS_ID.equals(custom.getNamespacedID());
+        if (!novoEhTracker && activeTrackers.containsKey(p.getUniqueId())) {
+            stopTracking(p);
         }
     }
 
@@ -210,17 +212,15 @@ public class TrackerCompassListener implements Listener {
                         }
                     }
 
-                    // Tracking da action bar
+                    // Segurança: se o jogador já não segura a bússola, para o rastreamento.
+                    // O rastreamento SÓ arranca com o botão direito (ver onUse) — nunca
+                    // automaticamente só por se estar a segurar a bússola. Assim, ao trocar
+                    // de slot / largar a bússola, o track para e NÃO volta a arrancar sozinho.
                     ItemStack hand = p.getInventory().getItemInMainHand();
                     CustomStack handCustom = CustomStack.byItemStack(hand);
-                    if (handCustom != null && COMPASS_ID.equals(handCustom.getNamespacedID())) {
-                        if (!activeTrackers.containsKey(id)) {
-                            startTracking(p);
-                        }
-                    } else {
-                        if (activeTrackers.containsKey(id)) {
-                            stopTracking(p);
-                        }
+                    boolean segurando = handCustom != null && COMPASS_ID.equals(handCustom.getNamespacedID());
+                    if (!segurando && activeTrackers.containsKey(id)) {
+                        stopTracking(p);
                     }
                 }
             }

@@ -190,6 +190,23 @@ public class Tlsplugin extends JavaPlugin {
                         p.getInventory().clear();
                     }
                     darCraftBook(p);
+
+                    // Ao entrar no mundo do evento, força Adventure (o Multiverse nem sempre
+                    // tira do Spectator quem morreu antes, ficando preso em Spectator).
+                    // Delay de 2 ticks para correr DEPOIS do gamemode que o Multiverse aplica.
+                    // Única exceção: se o jogo ESTÁ a decorrer, não tiramos de Survival quem
+                    // está vivo a jogar — mas quem está em Spectator volta na mesma a Adventure.
+                    if (!p.isOp()) {
+                        boolean jogoADecorrer = borderManager != null && borderManager.isRunning();
+                        Bukkit.getScheduler().runTaskLater(Tlsplugin.this, () -> {
+                            if (!p.isOnline()) return;
+                            if (!p.getWorld().getName().equalsIgnoreCase(evento)) return;
+                            GameMode gm = p.getGameMode();
+                            if (gm == GameMode.ADVENTURE) return;                 // já está bem
+                            if (jogoADecorrer && gm == GameMode.SURVIVAL) return; // vivo a jogar
+                            p.setGameMode(GameMode.ADVENTURE);
+                        }, 2L);
+                    }
                 }
             }
         }, this);

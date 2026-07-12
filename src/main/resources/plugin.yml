@@ -1,5 +1,5 @@
 name: tlsplugin
-version: "3.15"
+version: "3.15.2"
 main: com.tlsplugin.Tlsplugin
 api-version: "1.21"
 author: "ArrozNaTwitch"

@@ -177,6 +177,8 @@ public class KitMedicRecipe {
 
                 // ── CORREÇÃO CRÍTICA #2: addRevival AQUI após revive com sucesso ──
                 tlsPlugin.getMVPStatsManager().addRevival(healer.getName());
+                // Reseta o timer de tempo vivo do jogador revivido (reinicia a contagem)
+                tlsPlugin.getMVPStatsManager().onPlayerRevived(target.getName());
 
                 // Consumir o kit
                 ItemStack handCopy = hand.clone();

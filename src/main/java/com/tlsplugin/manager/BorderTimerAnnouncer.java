@@ -3,6 +3,8 @@ package com.tlsplugin.manager;
 import com.tlsplugin.Tlsplugin;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Sound;
+import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.List;
@@ -72,6 +74,25 @@ public class BorderTimerAnnouncer {
 
         Tlsplugin.broadcast("");
         Tlsplugin.broadcast(t(rodape));
+
+        // Som de noteblock para todos os jogadores que estão a jogar (não OPs em criativo)
+        boolean somHabilitado = plugin.getConfig().getBoolean("border_announcer.som.habilitar", true);
+        if (somHabilitado) {
+            String soundName = plugin.getConfig().getString("border_announcer.som.tipo", "BLOCK_NOTE_BLOCK_PLING");
+            float volume = (float) plugin.getConfig().getDouble("border_announcer.som.volume", 1.0);
+            float pitch  = (float) plugin.getConfig().getDouble("border_announcer.som.pitch",  1.0);
+            // Usa NamespacedKey + Registry para evitar o Sound.valueOf() deprecated no Paper 1.21+
+            org.bukkit.NamespacedKey key = org.bukkit.NamespacedKey.minecraft(soundName.toLowerCase());
+            Sound sound = org.bukkit.Registry.SOUNDS.get(key);
+            if (sound == null) {
+                plugin.getLogger().warning("[TLS] Som inválido no border_announcer.som.tipo: '" + soundName + "'. A usar BLOCK_NOTE_BLOCK_PLING.");
+                sound = Sound.BLOCK_NOTE_BLOCK_PLING;
+            }
+            Sound finalSound = sound;
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                p.playSound(p.getLocation(), finalSound, volume, pitch);
+            }
+        }
     }
 
     private String t(String s) {
