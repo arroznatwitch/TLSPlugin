@@ -223,7 +223,7 @@ public class Tlsplugin extends JavaPlugin {
         pvpListener.startUpdater();
 
         // Compass na action bar a apontar pro centro (0,0) — cede a vez ao grappler
-        this.centerCompassTask = new CenterCompassTask(this, grapplerItemListener);
+        this.centerCompassTask = new CenterCompassTask(this, grapplerItemListener, trackerCompassListener);
         this.centerCompassTask.start();
 
         // Auto-save MVP a cada minuto

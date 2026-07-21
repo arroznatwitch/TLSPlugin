@@ -12,8 +12,11 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemHeldEvent;
+import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.Location;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
@@ -24,9 +27,15 @@ public class GrapplerItemListener implements Listener {
 
     private final Tlsplugin plugin;
 
-    private final Map<UUID, Long>    cooldowns    = new HashMap<>();
-    private final Map<UUID, Integer> usos         = new HashMap<>();
+    // Cooldown e usos são guardados na PDC do PRÓPRIO ITEM (não por jogador), para
+    // que cada Grappler craftado tenha o seu timer independente — um jogador com 2
+    // grapplers pode usar os 2 sem partilharem cooldown/usos (mesmo bug do Tracker).
+    private final NamespacedKey cooldownKey;
+    private final NamespacedKey usosKey;
     private final Map<UUID, Boolean> noFallDamage = new HashMap<>();
+    // Debounce: o PlayerInteractEvent por vezes dispara 2x para o mesmo clique físico.
+    private final Map<UUID, Long> lastInteractNano = new HashMap<>();
+    private static final long DEBOUNCE_NANOS = 250_000_000L; // 250ms
 
     private final int     cooldownSegundos;
     private final int     maxUsos;
@@ -38,6 +47,8 @@ public class GrapplerItemListener implements Listener {
 
     public GrapplerItemListener(Tlsplugin plugin) {
         this.plugin = plugin;
+        this.cooldownKey = new NamespacedKey(plugin, "grappler_cooldown_end");
+        this.usosKey = new NamespacedKey(plugin, "grappler_usos");
 
         this.cooldownSegundos = plugin.getConfig().getInt("grappler_item.cooldown_segundos", 90);
         this.maxUsos          = plugin.getConfig().getInt("grappler_item.max_usos", 3);
@@ -66,8 +77,19 @@ public class GrapplerItemListener implements Listener {
         ItemStack hand = p.getInventory().getItemInMainHand();
         CustomStack handCustom = CustomStack.byItemStack(hand);
         if (handCustom == null || !GRAPPLER_ID.equals(handCustom.getNamespacedID())) return false;
-        long expira = cooldowns.getOrDefault(p.getUniqueId(), 0L);
-        return System.currentTimeMillis() < expira;
+        return System.currentTimeMillis() < getCooldownEnd(hand);
+    }
+
+    private long getCooldownEnd(ItemStack item) {
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return 0L;
+        return meta.getPersistentDataContainer().getOrDefault(cooldownKey, PersistentDataType.LONG, 0L);
+    }
+
+    private int getUsos(ItemStack item) {
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return 0;
+        return meta.getPersistentDataContainer().getOrDefault(usosKey, PersistentDataType.INTEGER, 0);
     }
 
     @EventHandler
@@ -77,17 +99,24 @@ public class GrapplerItemListener implements Listener {
         if (e.getItem() == null) return;
 
         Player p = e.getPlayer();
-        CustomStack custom = CustomStack.byItemStack(e.getItem());
+        ItemStack item = e.getItem();
+        CustomStack custom = CustomStack.byItemStack(item);
         if (custom == null || !GRAPPLER_ID.equals(custom.getNamespacedID())) return;
 
         e.setCancelled(true);
 
         UUID id  = p.getUniqueId();
+        long nowNano = System.nanoTime();
+        Long lastNano = lastInteractNano.get(id);
+        if (lastNano != null && (nowNano - lastNano) < DEBOUNCE_NANOS) return;
+        lastInteractNano.put(id, nowNano);
+
         long now = System.currentTimeMillis();
+        boolean semLimites = opInfinito && p.isOp();
 
         // Cooldown
-        if (!(opInfinito && p.isOp())) {
-            long expira = cooldowns.getOrDefault(id, 0L);
+        if (!semLimites) {
+            long expira = getCooldownEnd(item);
             if (now < expira) {
                 long restante = (expira - now) / 1000L;
                 p.sendMessage(msgCooldown.replace("{tempo}", String.valueOf(restante)));
@@ -96,8 +125,8 @@ public class GrapplerItemListener implements Listener {
         }
 
         // Usos
-        if (!(opInfinito && p.isOp())) {
-            int usados = usos.getOrDefault(id, 0);
+        if (!semLimites) {
+            int usados = getUsos(item);
             if (maxUsos > 0 && usados >= maxUsos) {
                 p.sendMessage(msgLimite.replace("{max}", String.valueOf(maxUsos)));
                 return;
@@ -111,18 +140,21 @@ public class GrapplerItemListener implements Listener {
         }
 
         // Consumir uso
-        if (!(opInfinito && p.isOp())) {
-            int novosUsos = usos.getOrDefault(id, 0) + 1;
-            usos.put(id, novosUsos);
+        if (!semLimites) {
+            int novosUsos = getUsos(item) + 1;
 
             if (maxUsos > 0 && novosUsos >= maxUsos) {
-                ItemStack item = e.getItem();
                 item.setAmount(0);
                 p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
                 p.sendMessage(msgQuebrou);
+            } else {
+                long expiraNovo = now + (cooldownSegundos * 1000L);
+                item.editMeta(m -> {
+                    m.getPersistentDataContainer().set(usosKey, PersistentDataType.INTEGER, novosUsos);
+                    m.getPersistentDataContainer().set(cooldownKey, PersistentDataType.LONG, expiraNovo);
+                });
+                p.getInventory().setItemInMainHand(item);
             }
-
-            cooldowns.put(id, now + (cooldownSegundos * 1000L));
         }
 
         p.sendMessage(msgUsar);
@@ -177,14 +209,13 @@ public class GrapplerItemListener implements Listener {
             @Override
             public void run() {
                 for (Player p : Bukkit.getOnlinePlayers()) {
-                    UUID id  = p.getUniqueId();
                     long now = System.currentTimeMillis();
-                    long expira = cooldowns.getOrDefault(id, 0L);
 
                     ItemStack hand = p.getInventory().getItemInMainHand();
                     CustomStack handCustom = CustomStack.byItemStack(hand);
                     if (handCustom == null || !GRAPPLER_ID.equals(handCustom.getNamespacedID())) continue;
 
+                    long expira = getCooldownEnd(hand);
                     if (now < expira) {
                         long restante = (expira - now) / 1000L;
                         int cheios = (int) Math.round(20.0 * (expira - now) / (cooldownSegundos * 1000.0));
@@ -201,7 +232,6 @@ public class GrapplerItemListener implements Listener {
 
     public void cleanup() {
         noFallDamage.clear();
-        cooldowns.clear();
-        usos.clear();
+        lastInteractNano.clear();
     }
 }

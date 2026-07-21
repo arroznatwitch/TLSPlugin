@@ -34,6 +34,12 @@ public class TrackerCompassListener implements Listener {
     private final NamespacedKey cooldownKey;
     private final NamespacedKey usosKey;
     private final Map<UUID, BukkitRunnable> activeTrackers = new HashMap<>();
+    // O Bukkit/Paper por vezes dispara PlayerInteractEvent DUAS VEZES para o mesmo
+    // clique físico (ex: RIGHT_CLICK_BLOCK seguido de RIGHT_CLICK_AIR perto de um
+    // bloco). Sem isto, um único clique ativa o tracker duas vezes, gasta 2 usos e
+    // manda a mensagem 2 vezes. Ignoramos repetições dentro de uma janela curta.
+    private final Map<UUID, Long> lastInteractNano = new HashMap<>();
+    private static final long DEBOUNCE_NANOS = 250_000_000L; // 250ms
 
     private final int cooldownSegundos;
     private final int maxUsos;
@@ -104,6 +110,12 @@ public class TrackerCompassListener implements Listener {
         ItemStack item = e.getItem();
         CustomStack custom = CustomStack.byItemStack(item);
         if (custom == null || !COMPASS_ID.equals(custom.getNamespacedID())) return;
+
+        UUID pid = p.getUniqueId();
+        long nowNano = System.nanoTime();
+        Long lastNano = lastInteractNano.get(pid);
+        if (lastNano != null && (nowNano - lastNano) < DEBOUNCE_NANOS) return;
+        lastInteractNano.put(pid, nowNano);
 
         long now = System.currentTimeMillis();
         boolean semLimites = opInfinito && p.isOp();
@@ -227,9 +239,18 @@ public class TrackerCompassListener implements Listener {
                         if (custom == null || !COMPASS_ID.equals(custom.getNamespacedID())) continue;
 
                         long expira = getCooldownEnd(item);
-                        String cooldownText = (now < expira)
-                                ? "§c" + ((expira - now) / 1000L) + "s"
-                                : "§aPronto!";
+                        String cooldownText;
+                        if (now < expira) {
+                            // Arredonda para cima em blocos de 5s: mudar o NBT (lore) do item
+                            // a cada segundo faz o item "piscar" na mão (o cliente reanima o
+                            // item ao receber a atualização). Atualizando só a cada 5s isso
+                            // deixa de acontecer quase sempre, mantendo o countdown legível.
+                            long segRestantes = (expira - now) / 1000L;
+                            long segArredondado = ((segRestantes + 4) / 5) * 5;
+                            cooldownText = "§c" + segArredondado + "s";
+                        } else {
+                            cooldownText = "§aPronto!";
+                        }
                         String usosText = String.valueOf(getUsos(item));
 
                         ItemUtils.updateDynamicLore(item, baseLore, cooldownText, usosText, maxUsosText);
@@ -248,6 +269,12 @@ public class TrackerCompassListener implements Listener {
                 }
             }
         }.runTaskTimer(plugin, 0L, 20L);
+    }
+
+    /** Usado por outros sistemas (ex: CenterCompassTask) para ceder a action bar
+     *  enquanto o tracker estiver ativamente a mostrar alvo/distância. */
+    public boolean isTracking(Player p) {
+        return activeTrackers.containsKey(p.getUniqueId());
     }
 
     private void stopTracking(Player p) {
@@ -298,5 +325,6 @@ public class TrackerCompassListener implements Listener {
     public void cleanup() {
         for (BukkitRunnable task : activeTrackers.values()) task.cancel();
         activeTrackers.clear();
+        lastInteractNano.clear();
     }
 }
