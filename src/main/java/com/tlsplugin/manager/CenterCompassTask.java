@@ -2,6 +2,7 @@ package com.tlsplugin.manager;
 
 import com.tlsplugin.Tlsplugin;
 import com.tlsplugin.listeners.GrapplerItemListener;
+import com.tlsplugin.listeners.TrackerCompassListener;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
@@ -16,21 +17,25 @@ import org.bukkit.scheduler.BukkitTask;
  * A action bar aparece encima da vida. Resenviada a cada 5 ticks para não desaparecer
  * e para a seta rodar suavemente quando o jogador vira a câmara.
  *
- * Cede a vez ao Grappler: quando o jogador tem o grappler na mão e em cooldown, o compass
- * não escreve, para não piscar por cima da barra de cooldown do grappler.
+ * A action bar só pode ter UM dono de cada vez — vários sistemas a escrever ao mesmo
+ * tempo faz o texto ficar a piscar/trocar. Este compass cede sempre a quem tiver
+ * prioridade: Grappler (cooldown) e Tracker (a rastrear) escrevem primeiro; o compass
+ * do centro só aparece quando nenhum dos outros dois está ativo.
  */
 public class CenterCompassTask {
 
     private final Tlsplugin plugin;
     private final GrapplerItemListener grappler;
+    private final TrackerCompassListener tracker;
     private BukkitTask task;
 
     // ↑ ↗ → ↘ ↓ ↙ ← ↖  — 8 direções, índice 0 = frente
     private static final String[] ARROWS = {"↑", "↗", "→", "↘", "↓", "↙", "←", "↖"};
 
-    public CenterCompassTask(Tlsplugin plugin, GrapplerItemListener grappler) {
+    public CenterCompassTask(Tlsplugin plugin, GrapplerItemListener grappler, TrackerCompassListener tracker) {
         this.plugin   = plugin;
         this.grappler = grappler;
+        this.tracker  = tracker;
     }
 
     public void start() {
@@ -41,6 +46,8 @@ public class CenterCompassTask {
                 if (plugin.isLobbyWorld(p.getWorld())) continue;
                 // Cede a action bar ao grappler quando este está a mostrar o cooldown.
                 if (grappler != null && grappler.isShowingActionBar(p)) continue;
+                // Cede a action bar ao tracker enquanto estiver ativamente a rastrear.
+                if (tracker != null && tracker.isTracking(p)) continue;
                 sendCompass(p);
             }
         }, 0L, 5L);
