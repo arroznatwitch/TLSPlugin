@@ -18,6 +18,8 @@ import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.Team;
 
@@ -26,10 +28,12 @@ import java.util.*;
 public class TrackerCompassListener implements Listener {
 
     private final Tlsplugin plugin;
-    private final Map<UUID, Long> cooldowns = new HashMap<>();
-    private final Map<UUID, Integer> usos = new HashMap<>();
+    // Cooldown e usos são guardados na PDC do PRÓPRIO ITEM (não por jogador), para
+    // que cada bússola craftada tenha o seu timer independente — um jogador com 2
+    // trackers pode usar os 2 sem partilharem cooldown/usos.
+    private final NamespacedKey cooldownKey;
+    private final NamespacedKey usosKey;
     private final Map<UUID, BukkitRunnable> activeTrackers = new HashMap<>();
-    private final Map<UUID, String> lastLoreState = new HashMap<>();
 
     private final int cooldownSegundos;
     private final int maxUsos;
@@ -42,6 +46,8 @@ public class TrackerCompassListener implements Listener {
 
     public TrackerCompassListener(Tlsplugin plugin) {
         this.plugin = plugin;
+        this.cooldownKey = new NamespacedKey(plugin, "tracker_cooldown_end");
+        this.usosKey = new NamespacedKey(plugin, "tracker_usos");
 
         this.cooldownSegundos = plugin.getConfig().getInt("compass_tracker.cooldown_segundos", 180);
         this.maxUsos = plugin.getConfig().getInt("compass_tracker.max_usos", 3);
@@ -95,14 +101,15 @@ public class TrackerCompassListener implements Listener {
         if (e.getItem() == null) return;
 
         Player p = e.getPlayer();
-        CustomStack custom = CustomStack.byItemStack(e.getItem());
+        ItemStack item = e.getItem();
+        CustomStack custom = CustomStack.byItemStack(item);
         if (custom == null || !COMPASS_ID.equals(custom.getNamespacedID())) return;
 
-        UUID id = p.getUniqueId();
         long now = System.currentTimeMillis();
+        boolean semLimites = opInfinito && p.isOp();
 
-        if (!(opInfinito && p.isOp())) {
-            long expira = cooldowns.getOrDefault(id, 0L);
+        if (!semLimites) {
+            long expira = getCooldownEnd(item);
             if (now < expira) {
                 long restante = (expira - now) / 1000L;
                 p.sendMessage(msgCooldown.replace("{tempo}", String.valueOf(restante)));
@@ -110,13 +117,13 @@ public class TrackerCompassListener implements Listener {
             }
         }
 
-        if (!(opInfinito && p.isOp())) {
-            int usados = usos.getOrDefault(id, 0);
+        if (!semLimites) {
+            int usados = getUsos(item);
             if (maxUsos > 0 && usados >= maxUsos) {
                 p.sendMessage(msgLimite);
                 return;
             }
-            usos.put(id, usados + 1);
+            item.editMeta(m -> m.getPersistentDataContainer().set(usosKey, PersistentDataType.INTEGER, usados + 1));
         }
 
         startTracking(p);
@@ -124,9 +131,26 @@ public class TrackerCompassListener implements Listener {
         String nomeAlvo = alvoInicial != null ? alvoInicial.getName() : "?";
         p.sendMessage(msgUsar.replace("{alvo}", nomeAlvo));
 
-        if (!(opInfinito && p.isOp())) {
-            cooldowns.put(id, now + (cooldownSegundos * 1000L));
+        if (!semLimites) {
+            long expiraNovo = now + (cooldownSegundos * 1000L);
+            item.editMeta(m -> m.getPersistentDataContainer().set(cooldownKey, PersistentDataType.LONG, expiraNovo));
         }
+
+        // Garante que a mão do jogador reflete o item atualizado (alguns servidores
+        // devolvem uma cópia em getItem() em vez da referência viva do slot).
+        p.getInventory().setItemInMainHand(item);
+    }
+
+    private long getCooldownEnd(ItemStack item) {
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return 0L;
+        return meta.getPersistentDataContainer().getOrDefault(cooldownKey, PersistentDataType.LONG, 0L);
+    }
+
+    private int getUsos(ItemStack item) {
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return 0;
+        return meta.getPersistentDataContainer().getOrDefault(usosKey, PersistentDataType.INTEGER, 0);
     }
 
     @EventHandler
@@ -182,34 +206,33 @@ public class TrackerCompassListener implements Listener {
         new BukkitRunnable() {
             @Override
             public void run() {
+                String maxUsosText = maxUsos > 0 ? String.valueOf(maxUsos) : "∞";
+                long now = System.currentTimeMillis();
+
                 for (Player p : Bukkit.getOnlinePlayers()) {
                     UUID id = p.getUniqueId();
-                    long now = System.currentTimeMillis();
-                    long expira = cooldowns.getOrDefault(id, 0L);
 
-                    String cooldownText = (now < expira)
-                            ? "§c" + ((expira - now) / 1000L) + "s"
-                            : "§aPronto!";
-                    String usosText = String.valueOf(usos.getOrDefault(id, 0));
-                    String maxUsosText = maxUsos > 0 ? String.valueOf(maxUsos) : "∞";
+                    // Cada item tem o seu próprio cooldown/usos (PDC) — a lore de cada
+                    // bússola reflete só o estado dela, nunca o de outra que o jogador tenha.
+                    // ItemUtils.updateDynamicLore só reescreve a meta se o texto mudou, o que
+                    // evita o "flicking" na mão quando o estado já está correto.
+                    List<ItemStack> itemsToCheck = new ArrayList<>();
+                    itemsToCheck.addAll(Arrays.asList(p.getInventory().getContents()));
+                    itemsToCheck.add(p.getInventory().getItemInOffHand());
+                    itemsToCheck.add(p.getItemOnCursor());
 
-                    // Só atualiza a lore se o estado mudou
-                    String stateKey = cooldownText + "|" + usosText;
-                    if (!stateKey.equals(lastLoreState.get(id))) {
-                        lastLoreState.put(id, stateKey);
+                    for (ItemStack item : itemsToCheck) {
+                        if (item == null || item.getType() == Material.AIR) continue;
+                        CustomStack custom = CustomStack.byItemStack(item);
+                        if (custom == null || !COMPASS_ID.equals(custom.getNamespacedID())) continue;
 
-                        List<ItemStack> itemsToCheck = new ArrayList<>();
-                        itemsToCheck.addAll(Arrays.asList(p.getInventory().getContents()));
-                        itemsToCheck.add(p.getInventory().getItemInOffHand());
-                        itemsToCheck.add(p.getItemOnCursor());
+                        long expira = getCooldownEnd(item);
+                        String cooldownText = (now < expira)
+                                ? "§c" + ((expira - now) / 1000L) + "s"
+                                : "§aPronto!";
+                        String usosText = String.valueOf(getUsos(item));
 
-                        for (ItemStack item : itemsToCheck) {
-                            if (item == null || item.getType() == Material.AIR) continue;
-                            CustomStack custom = CustomStack.byItemStack(item);
-                            if (custom != null && COMPASS_ID.equals(custom.getNamespacedID())) {
-                                ItemUtils.updateDynamicLore(item, baseLore, cooldownText, usosText, maxUsosText);
-                            }
-                        }
+                        ItemUtils.updateDynamicLore(item, baseLore, cooldownText, usosText, maxUsosText);
                     }
 
                     // Segurança: se o jogador já não segura a bússola, para o rastreamento.
@@ -275,6 +298,5 @@ public class TrackerCompassListener implements Listener {
     public void cleanup() {
         for (BukkitRunnable task : activeTrackers.values()) task.cancel();
         activeTrackers.clear();
-        lastLoreState.clear();
     }
 }
