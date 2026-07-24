@@ -119,8 +119,12 @@ public class TeamManager {
                         .anyMatch(n -> n.getGroupName().equalsIgnoreCase(id));
                 if (tem) { equipa = id; break; }
             }
-            if (equipa == null) return; // jogador ainda não escolheu equipa — nada a sincronizar
 
+            // Mesmo sem equipa (ex: só tem "admin"/"default" no LuckPerms), removemos
+            // sempre de equipas antigas — o LuckPerms é a fonte da verdade. Sem isto,
+            // um jogador que perdeu o grupo de equipa (ou nunca teve) ficava preso na
+            // Team antiga do scoreboard.dat (ex: de um teste anterior), mesmo sem
+            // qualquer permissão/grupo de equipa no LuckPerms.
             String equipaFinal = equipa;
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (!player.isOnline()) return;
@@ -131,6 +135,8 @@ public class TeamManager {
                     Team outra = scoreboard.getTeam(id);
                     if (outra != null) outra.removeEntry(player.getName());
                 }
+
+                if (equipaFinal == null) return; // sem equipa nova para adicionar
 
                 Team team = scoreboard.getTeam(equipaFinal);
                 if (team == null) {
