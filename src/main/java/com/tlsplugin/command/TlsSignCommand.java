@@ -73,7 +73,9 @@ public class TlsSignCommand implements CommandExecutor {
 
         String id   = "spawn_" + color;
         String perm = "tls.team." + color;
-        String cmd  = "tlspawn";
+        // Cor explícita (em vez do "tlspawn" genérico): assim a placa leva sempre para o
+        // spawn DELA, mesmo que quem clique (ex: um OP) não tenha essa equipa própria.
+        String cmd  = "tlspawn " + color;
 
         if (!spawnManager.hasSpawn(color)) {
             sender.sendMessage(prefix() + "§e⚠ A equipa §b" + color + " §eainda não tem spawn definido.");
@@ -90,7 +92,7 @@ public class TlsSignCommand implements CommandExecutor {
         sender.sendMessage(prefix() + "§a✔ Placa ligada à equipa §b" + color + "§a!");
         sender.sendMessage("§7ID§8:          §b" + id);
         sender.sendMessage("§7Permissão§8:   §b" + perm);
-        sender.sendMessage("§7Comando§8:     §btlspawn §7(leva ao spawn da própria equipa)");
+        sender.sendMessage("§7Comando§8:     §b" + cmd + " §7(leva ao spawn desta equipa)");
         sender.sendMessage("§7Localização§8: §e" + loc.getBlockX() + " " + loc.getBlockY() + " " + loc.getBlockZ()
                 + " §7(" + loc.getWorld().getName() + ")");
         sender.sendMessage("§8§m──────────────────────────────");

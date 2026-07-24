@@ -40,8 +40,11 @@ public class SignListener implements Listener {
         e.setCancelled(true);
         Player player = e.getPlayer();
 
-        // Verificar permissão
-        if (!data.permission.isEmpty() && !player.hasPermission(data.permission)) {
+        // Verificar permissão — OPs passam sempre, mesmo sem a equipa/permissão da placa
+        // (ex: teleportar para o spawn de qualquer equipa para testes/staff), porque com
+        // LuckPerms instalado o bypass automático de OP do Bukkit deixa de se aplicar a
+        // permissões desconhecidas como "tls.team.red".
+        if (!player.isOp() && !data.permission.isEmpty() && !player.hasPermission(data.permission)) {
             String msg = data.noPermMessage.isEmpty()
                 ? "§cNão tens permissão para usar esta placa."
                 : data.noPermMessage;
