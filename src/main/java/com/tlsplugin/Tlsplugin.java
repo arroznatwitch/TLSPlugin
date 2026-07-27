@@ -55,6 +55,7 @@ public class Tlsplugin extends JavaPlugin {
     private CenterCompassTask          centerCompassTask;
     private WeaponRangeListener        weaponRangeListener;
     private SickleKnockbackListener    sickleKnockbackListener;
+    private SuddenDeathManager         suddenDeathManager;
 
     @Override
     public void onEnable() {
@@ -70,6 +71,8 @@ public class Tlsplugin extends JavaPlugin {
         this.spawnManager            = new SpawnManager(this);
         this.freezeManager           = new GameFreezeManager(this);
         this.borderManager           = new BorderManager(this);
+        this.suddenDeathManager      = new SuddenDeathManager(this, borderManager);
+        Bukkit.getPluginManager().registerEvents(suddenDeathManager, this);
         this.borderTimerAnnouncer    = new BorderTimerAnnouncer(this, borderManager);
         this.borderScoreboardManager = new BorderScoreboardManager(this, borderManager);
         this.borderScoreboardListener = new BorderScoreboardListener(this, borderScoreboardManager);
@@ -383,4 +386,5 @@ public class Tlsplugin extends JavaPlugin {
     public ProntoCommand getProntoCommand()                        { return prontoCommand; }
     public TeamManager getTeamManager()                            { return teamManager; }
     public CapsuleManager getCapsuleManager()                      { return capsuleManager; }
+    public SuddenDeathManager getSuddenDeathManager()               { return suddenDeathManager; }
 }

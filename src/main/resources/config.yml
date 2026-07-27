@@ -57,6 +57,9 @@ mensagens:
 
 # BossBar text template (pode usar os mesmos placeholders)
 bossbar_template: "§e⏳ Borda §f{stage}/{total} — §eFecha até §f§l{coord} §eem §f§l{time}"
+# Boss bar mostrada no intervalo ENTRE bordas (pausa normal do ciclo, não é o /pause manual).
+# Mesmo estilo do bossbar_template, para não parecer um texto diferente.
+bossbar_template_pausada: "§e⏳ Borda §f{stage}/{total} — §ePAUSADA §7- §ePróxima até §f§l{coord} §eem §f§l{time}"
 
 # Formato de arredondamento: numero de casas decimais ao mostrar alteração de vida
 pvp_decimais: 1
@@ -491,6 +494,34 @@ border_announcer:
     tipo: "BLOCK_NOTE_BLOCK_PLING"
     volume: 1.0
     pitch: 1.0
+
+# --- Morte Súbita ---
+# Depois da última borda terminar, espera "delay_minutos" e depois começa a morte súbita:
+# a lava sobe até "lava_camada_alvo" (mata quem está acampado) e a borda encolhe para 1
+# bloco no centro (0,0) em "borda_tempo_segundos". Fica desligado por predefinição — só
+# liga se quiseres mesmo este modo extra no fim do evento.
+sudden_death:
+  habilitar: false
+  delay_minutos: 5
+  lava_camada_alvo: 64
+  borda_tempo_segundos: 300
+  # Quantos blocos processar por tick ao "encher" cada camada de lava — mais alto é mais
+  # rápido mas usa mais TPS. Ajusta se notares lag ao começar a subida da lava.
+  lava_blocos_por_tick: 4000
+  # A lava sobe ao mesmo ritmo que a borda demora a fechar (borda_tempo_segundos) — as duas
+  # coisas terminam juntas, em vez da lava encher tudo em poucos segundos. A cada X blocos
+  # que o nível Y sobe, avisa no chat + toca som (evita spam a cada camada individual).
+  lava_aviso_intervalo_y: 5
+  som:
+    inicio: "ENTITY_WITHER_SPAWN"
+    lava_subindo: "BLOCK_LAVA_POP"
+    volume: 1.0
+    pitch: 1.0
+  mensagens:
+    aviso_delay: "§f[§bTLS§f] §c§lA última borda terminou! A MORTE SÚBITA começa em §f{minutos} minutos§c."
+    inicio: "§f[§bTLS§f] §4§l☠ MORTE SÚBITA INICIADA! §cA lava está a subir e a borda vai fechar completamente!"
+    lava_subindo: "§f[§bTLS§f] §c⚠ A lava está a subir! Nível atual§8: §fY = {y}"
+    fim: "§f[§bTLS§f] §4§l☠ A morte súbita terminou."
 
 # --- Blocos de Equipa ---
 teams:

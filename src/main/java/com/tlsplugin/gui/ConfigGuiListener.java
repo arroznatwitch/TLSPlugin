@@ -52,6 +52,15 @@ public class ConfigGuiListener implements Listener {
 
         switch (navType) {
 
+            case "main_prev", "main_next" -> {
+                if (path == null) return;
+                try {
+                    configGui.openMain(player, Integer.parseInt(path));
+                } catch (NumberFormatException ignored) {
+                    configGui.openMain(player, 0);
+                }
+            }
+
             case "close" -> {
                 player.closeInventory();
                 navStack.remove(player.getUniqueId());

@@ -234,11 +234,15 @@ public class BorderManager implements Listener {
 
     private void scheduleNextShrink() {
         if (currentStageIndex < 0 || currentStageIndex >= stages.size() - 1) {
+            boolean chegouAoFim = currentStageIndex >= 0;
             running = false;
             bossBar.removeAll();
             bossBar.setVisible(false);
             if (alertTask != null) { alertTask.cancel(); alertTask = null; }
             saveState();
+            if (chegouAoFim) {
+                Tlsplugin.getInstance().getSuddenDeathManager().onFinalBorderReached();
+            }
             return;
         }
 
@@ -328,10 +332,15 @@ public class BorderManager implements Listener {
 
             updateBossBar(currentStageIndex + 1, stages.size(), to, remainingShrinkSeconds);
 
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                if (isNearBorder(p, w.getWorldBorder().getSize(), ALERT_DIST)
-                        && !alertCooldown.contains(p.getUniqueId())) {
-                    triggerWarning(p);
+            // Sem aviso de proximidade a encolher para a ÚLTIMA borda — depois disso não há
+            // mais nenhuma borda para onde fugir, o aviso deixa de fazer sentido.
+            boolean encolhendoParaUltimaBorda = currentStageIndex + 1 >= stages.size() - 1;
+            if (!encolhendoParaUltimaBorda) {
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    if (!p.isOp() && isNearBorder(p, w.getWorldBorder().getSize(), ALERT_DIST)
+                            && !alertCooldown.contains(p.getUniqueId())) {
+                        triggerWarning(p);
+                    }
                 }
             }
 
@@ -443,9 +452,16 @@ public class BorderManager implements Listener {
     }
 
     private void updateBossBarPaused(int seconds) {
-        String pausedTemplate = plugin.getConfig().getString("mensagens.borda_pausada",
-                "§e[Borda] PAUSADA — volta em {time}");
+        double nextTarget = (currentStageIndex + 1 < stages.size())
+                ? stages.get(currentStageIndex + 1)
+                : stages.get(currentStageIndex);
+        String coord = "±" + (int) (nextTarget / 2);
+
+        String pausedTemplate = plugin.getConfig().getString("bossbar_template_pausada",
+                "§eBorda {stage}/{total} §7- §ePAUSADA §7- Próxima X/Z {coord} em §f{time}");
         String text = pausedTemplate
+                .replace("{coord}", coord)
+                .replace("{to}",    coord)
                 .replace("{stage}", String.valueOf(currentStageIndex + 1))
                 .replace("{total}", String.valueOf(stages.size()))
                 .replace("{time}",  formatSeconds(seconds));
@@ -495,6 +511,7 @@ public class BorderManager implements Listener {
     }
 
     public void stopAll() {
+        Tlsplugin.getInstance().getSuddenDeathManager().cancelAll();
         if (alertTask != null) { alertTask.cancel(); alertTask = null; }
         if (pauseTask != null) { pauseTask.cancel(); pauseTask = null; }
         running = false;

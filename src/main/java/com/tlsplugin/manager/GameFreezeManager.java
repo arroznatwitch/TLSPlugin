@@ -2,9 +2,14 @@ package com.tlsplugin.manager;
 
 import com.tlsplugin.Tlsplugin;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
+import org.bukkit.GameRule;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.World;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Furnace;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
@@ -25,7 +30,9 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class GameFreezeManager implements Listener {
@@ -35,6 +42,12 @@ public class GameFreezeManager implements Listener {
 
     private final Set<LivingEntity> frozenMobs  = new HashSet<>();
     private final Set<Item>         frozenItems = new HashSet<>();
+
+    // Congelamento do dia e das fornalhas durante a pausa (/pause e /aceitarpausa).
+    private Boolean preFreezeDaylightCycle = null;
+    private final Map<Location, Furnace> frozenFurnaces         = new HashMap<>();
+    private final Map<Location, int[]>   frozenFurnaceSnapshot  = new HashMap<>(); // [burnTime, cookTime, cookTimeTotal]
+    private BukkitTask furnaceFreezeTask;
 
     private Sound pauseMusic = Sound.MUSIC_DISC_CAT;
 
@@ -115,6 +128,7 @@ public class GameFreezeManager implements Listener {
 
     public void freezeAll() {
         frozen = true;
+        pauseWorldTicking();
 
         for (Entity e : getEventWorld().getEntities()) {
             if (e instanceof LivingEntity mob && !(e instanceof Player)) {
@@ -157,6 +171,7 @@ public class GameFreezeManager implements Listener {
                     sendCountdownTitle("§a§lA PAUSA ACABOU!", "");
                     playEnd(Sound.UI_TOAST_CHALLENGE_COMPLETE);
                     frozen = false;
+                    resumeWorldTicking();
                     frozenMobs.forEach(m -> m.setAI(true));
                     frozenItems.forEach(i -> i.setGravity(true));
                     frozenMobs.clear(); frozenItems.clear();
@@ -276,6 +291,7 @@ public class GameFreezeManager implements Listener {
                     sendCountdownTitle("§a§lA PAUSA ACABOU!", "");
                     playEnd(Sound.UI_TOAST_CHALLENGE_COMPLETE);
                     frozen = false;
+                    resumeWorldTicking();
                     frozenMobs.forEach(m -> m.setAI(true));
                     frozenItems.forEach(i -> i.setGravity(true));
                     frozenMobs.clear(); frozenItems.clear();
@@ -285,6 +301,78 @@ public class GameFreezeManager implements Listener {
                 count--;
             }
         }.runTaskTimer(plugin, 0L, 20L);
+    }
+
+    // ==========================================================
+    //     CONGELAR TEMPO/FORNALHAS (dia parado + fornalhas paradas)
+    // ==========================================================
+
+    /** Para o ciclo dia/noite e trava o progresso de todas as fornalhas do mundo do evento. */
+    private void pauseWorldTicking() {
+        World world = getEventWorld();
+
+        preFreezeDaylightCycle = world.getGameRuleValue(GameRule.DO_DAYLIGHT_CYCLE);
+        world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+
+        freezeFurnaces(world);
+    }
+
+    /** Restaura o ciclo dia/noite anterior e liberta as fornalhas para continuarem normalmente. */
+    private void resumeWorldTicking() {
+        World world = getEventWorld();
+
+        if (preFreezeDaylightCycle != null) {
+            world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, preFreezeDaylightCycle);
+            preFreezeDaylightCycle = null;
+        }
+
+        unfreezeFurnaces();
+    }
+
+    private static boolean isFurnaceMaterial(Material m) {
+        return m == Material.FURNACE || m == Material.BLAST_FURNACE || m == Material.SMOKER;
+    }
+
+    /**
+     * Não existe gamerule para "pausar" fornalhas — o burn/cook time delas avança sempre,
+     * gamerule nenhum trava isso. A solução é capturar o estado (burnTime/cookTime) de todas
+     * as fornalhas do mundo do evento ao pausar, e todos os ticks repor esses valores exatos
+     * enquanto a pausa durar, para elas ficarem visivelmente congeladas. Ao despausar, paramos
+     * de repor e elas continuam a arder a partir de onde ficaram.
+     */
+    private void freezeFurnaces(World world) {
+        frozenFurnaces.clear();
+        frozenFurnaceSnapshot.clear();
+
+        for (Chunk chunk : world.getLoadedChunks()) {
+            for (BlockState state : chunk.getTileEntities()) {
+                if (!isFurnaceMaterial(state.getType())) continue;
+                if (!(state instanceof Furnace furnace)) continue;
+                Location loc = furnace.getLocation();
+                frozenFurnaces.put(loc, furnace);
+                frozenFurnaceSnapshot.put(loc,
+                        new int[]{furnace.getBurnTime(), furnace.getCookTime(), furnace.getCookTimeTotal()});
+            }
+        }
+
+        if (furnaceFreezeTask != null) furnaceFreezeTask.cancel();
+        furnaceFreezeTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            for (Map.Entry<Location, Furnace> entry : frozenFurnaces.entrySet()) {
+                int[] snap = frozenFurnaceSnapshot.get(entry.getKey());
+                if (snap == null) continue;
+                Furnace furnace = entry.getValue();
+                furnace.setBurnTime((short) snap[0]);
+                furnace.setCookTime((short) snap[1]);
+                furnace.setCookTimeTotal(snap[2]);
+                furnace.update(true, false);
+            }
+        }, 0L, 1L);
+    }
+
+    private void unfreezeFurnaces() {
+        if (furnaceFreezeTask != null) { furnaceFreezeTask.cancel(); furnaceFreezeTask = null; }
+        frozenFurnaces.clear();
+        frozenFurnaceSnapshot.clear();
     }
 
     // ==========================================================

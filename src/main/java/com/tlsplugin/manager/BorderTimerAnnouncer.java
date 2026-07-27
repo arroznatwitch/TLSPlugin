@@ -38,6 +38,10 @@ public class BorderTimerAnnouncer {
         int currentIndex = borderManager.getCurrentStage() - 1;
         int total = bordas.size();
 
+        // Última borda: não há mais nada para anunciar (já não vai encolher mais), então
+        // paramos de mostrar este aviso periódico.
+        if (currentIndex >= total - 1) return;
+
         String cabecalho   = plugin.getConfig().getString("border_announcer.cabecalho", "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
         String titulo      = plugin.getConfig().getString("border_announcer.titulo",    "§b§l⚔ BORDAS DO EVENTO ⚔");
         String rodape      = plugin.getConfig().getString("border_announcer.rodape",    "§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬");
@@ -48,9 +52,10 @@ public class BorderTimerAnnouncer {
         String setaAtual   = plugin.getConfig().getString("border_announcer.seta_atual",   "▶ ");
         String prefixoFutura = plugin.getConfig().getString("border_announcer.prefixo_futuro", "  ");
 
-        Tlsplugin.broadcast(t(cabecalho));
-        Tlsplugin.broadcast(t(titulo));
-        Tlsplugin.broadcast("");
+        List<String> linhas = new java.util.ArrayList<>();
+        linhas.add(t(cabecalho));
+        linhas.add(t(titulo));
+        linhas.add("");
 
         for (int i = 0; i < bordas.size(); i++) {
             double borda = bordas.get(i);
@@ -69,30 +74,41 @@ public class BorderTimerAnnouncer {
                 linha = corFutura + prefixoFutura + "Borda " + numero + " — X/Z " + coord;
             }
 
-            Tlsplugin.broadcast(t(linha));
+            linhas.add(t(linha));
         }
 
-        Tlsplugin.broadcast("");
-        Tlsplugin.broadcast(t(rodape));
+        linhas.add("");
+        linhas.add(t(rodape));
 
-        // Som de noteblock para todos os jogadores que estão a jogar (não OPs em criativo)
+        // Som de noteblock
         boolean somHabilitado = plugin.getConfig().getBoolean("border_announcer.som.habilitar", true);
+        Sound sound = null;
+        float volume = 1.0f, pitch = 1.0f;
         if (somHabilitado) {
             String soundName = plugin.getConfig().getString("border_announcer.som.tipo", "BLOCK_NOTE_BLOCK_PLING");
-            float volume = (float) plugin.getConfig().getDouble("border_announcer.som.volume", 1.0);
-            float pitch  = (float) plugin.getConfig().getDouble("border_announcer.som.pitch",  1.0);
-            // Usa NamespacedKey + Registry para evitar o Sound.valueOf() deprecated no Paper 1.21+
-            org.bukkit.NamespacedKey key = org.bukkit.NamespacedKey.minecraft(soundName.toLowerCase());
-            Sound sound = org.bukkit.Registry.SOUNDS.get(key);
+            volume = (float) plugin.getConfig().getDouble("border_announcer.som.volume", 1.0);
+            pitch  = (float) plugin.getConfig().getDouble("border_announcer.som.pitch",  1.0);
+            // As chaves reais do registry usam pontos (ex: "block.note_block.pling"), não
+            // sublinhados — por isso NamespacedKey.minecraft(soundName.toLowerCase()) falhava
+            // sempre. Convertemos a key de cada som (pontos → underscore) e comparamos com o
+            // nome configurado (ex: BLOCK_NOTE_BLOCK_PLING).
+            for (Sound s : org.bukkit.Registry.SOUNDS) {
+                String keyAsEnumStyle = s.key().value().replace('.', '_');
+                if (keyAsEnumStyle.equalsIgnoreCase(soundName)) { sound = s; break; }
+            }
             if (sound == null) {
                 plugin.getLogger().warning("[TLS] Som inválido no border_announcer.som.tipo: '" + soundName + "'. A usar BLOCK_NOTE_BLOCK_PLING.");
                 sound = Sound.BLOCK_NOTE_BLOCK_PLING;
             }
-            Sound finalSound = sound;
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                p.playSound(p.getLocation(), finalSound, volume, pitch);
-            }
         }
+
+        // Só para quem NÃO é OP — este aviso é dirigido a jogadores, não à staff.
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (p.isOp()) continue;
+            for (String linha : linhas) p.sendMessage(linha);
+            if (sound != null) p.playSound(p.getLocation(), sound, volume, pitch);
+        }
+        Bukkit.getConsoleSender().sendMessage(String.join("\n", linhas));
     }
 
     private String t(String s) {

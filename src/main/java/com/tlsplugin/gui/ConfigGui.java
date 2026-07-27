@@ -54,6 +54,7 @@ public class ConfigGui {
         ICONS.put("proximidade_fight",     Material.ENDER_EYE);
         ICONS.put("mob_gold_drop",         Material.GOLD_NUGGET);
         ICONS.put("border_announcer",      Material.BELL);
+        ICONS.put("sudden_death",          Material.LAVA_BUCKET);
         ICONS.put("spectator",             Material.GLASS);
         ICONS.put("special_apple",         Material.GOLDEN_APPLE);
         ICONS.put("kit_parcial",           Material.YELLOW_DYE);
@@ -105,6 +106,7 @@ public class ConfigGui {
         DISPLAY_NAMES.put("proximidade_fight",      "Alerta de Proximidade");
         DISPLAY_NAMES.put("mob_gold_drop",          "Drops de Ouro (Mobs)");
         DISPLAY_NAMES.put("border_announcer",       "Anunciador de Bordas");
+        DISPLAY_NAMES.put("sudden_death",           "Morte Súbita");
         DISPLAY_NAMES.put("spectator",              "Modo Espectador");
         DISPLAY_NAMES.put("special_apple",          "Maçã Especial");
         DISPLAY_NAMES.put("kit_parcial",            "Kit Parcial");
@@ -135,8 +137,22 @@ public class ConfigGui {
 
     // ─── Main menu ────────────────────────────────────────────────────────────
 
+    /** Slots de conteúdo por página (4 linhas × 7 colunas, sem contar as bordas). */
+    private static final int MAIN_KEYS_PER_PAGE = 28;
+
     public void openMain(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 54, "§8[§bTLS§8] §f§lConfiguração");
+        openMain(player, 0);
+    }
+
+    public void openMain(Player player, int page) {
+        List<String> keys = new ArrayList<>(plugin.getConfig().getKeys(false));
+        int totalPages = Math.max(1, (int) Math.ceil(keys.size() / (double) MAIN_KEYS_PER_PAGE));
+        page = Math.max(0, Math.min(page, totalPages - 1));
+
+        String tituloPagina = totalPages > 1
+                ? "§8[§bTLS§8] §f§lConfiguração §7(" + (page + 1) + "/" + totalPages + ")"
+                : "§8[§bTLS§8] §f§lConfiguração";
+        Inventory inv = Bukkit.createInventory(null, 54, tituloPagina);
 
         // Top and bottom glass border
         ItemStack glass = makeGlass();
@@ -162,11 +178,21 @@ public class ConfigGui {
         inv.setItem(49, navItem(Material.BARRIER, "§c§lFechar",
                 "§7Fecha este menu.", "close", null));
 
+        // Prev/Next (só aparecem se houver mais do que 1 página)
+        if (page > 0) {
+            inv.setItem(48, navItem(Material.ARROW, "§f§l« Página anterior",
+                    "§7Vai para a página §b" + page + "§7.", "main_prev", String.valueOf(page - 1)));
+        }
+        if (page < totalPages - 1) {
+            inv.setItem(50, navItem(Material.ARROW, "§f§lPróxima página »",
+                    "§7Vai para a página §b" + (page + 2) + "§7.", "main_next", String.valueOf(page + 1)));
+        }
+
         // Place config keys in content area (slots 10-16, 19-25, 28-34, 37-43)
-        List<String> keys = new ArrayList<>(plugin.getConfig().getKeys(false));
+        int fromIndex = page * MAIN_KEYS_PER_PAGE;
+        int toIndex   = Math.min(fromIndex + MAIN_KEYS_PER_PAGE, keys.size());
         int slot = 10;
-        for (String key : keys) {
-            if (slot > 43) break;
+        for (String key : keys.subList(fromIndex, toIndex)) {
             // Advance past border columns
             while (slot % 9 == 0 || slot % 9 == 8) slot++;
             if (slot > 43) break;
