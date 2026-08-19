@@ -14,6 +14,7 @@ public class GoldPotionItem implements Listener {
 
     private static JavaPlugin plugin;
     private static final String CUSTOM_ITEM_ID = "tls_plugin:goldpotion_item";
+    private static boolean listenerRegistered = false;
 
     private GoldPotionItem(JavaPlugin plugin) {
         // privado — usar register()
@@ -22,8 +23,12 @@ public class GoldPotionItem implements Listener {
     public static void register(JavaPlugin pl) {
         plugin = pl;
 
-        // Regista listener (necessário se no futuro tiver eventos aqui)
-        Bukkit.getPluginManager().registerEvents(new GoldPotionItem(plugin), plugin);
+        // Regista listener (necessário se no futuro tiver eventos aqui).
+        // Só uma vez: o register() volta a ser chamado a cada reload.
+        if (!listenerRegistered) {
+            Bukkit.getPluginManager().registerEvents(new GoldPotionItem(plugin), plugin);
+            listenerRegistered = true;
+        }
 
 
         // Remove receita anterior (evita duplicados em reload)

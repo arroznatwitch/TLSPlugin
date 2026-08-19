@@ -337,6 +337,14 @@ public class Tlsplugin extends JavaPlugin {
     public void reloadAllConfigs() {
         reloadConfig();
         CraftBookGui.loadConfig(getDataFolder());
+
+        // Sem isto, mudar um "habilitar_receita" no /tlsconfig só fazia efeito depois de
+        // reiniciar o servidor: a config era relida, mas as receitas nunca eram voltadas a
+        // registar/remover. Os register() são idempotentes quanto a listeners.
+        if (Bukkit.getPluginManager().isPluginEnabled("ItemsAdder")) {
+            registerCustomRecipes();
+        }
+
         if (borderManager != null) borderManager.reloadStages();
         for (World w : Bukkit.getWorlds()) applyGamerules(w);
         if (teamManager != null) {

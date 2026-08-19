@@ -71,12 +71,12 @@ craft_book:
       habilitar_receita: true
       nome_display:      "§5§lGrappler"
     kit_completo:
-      habilitar:         false
-      habilitar_receita: false
+      habilitar:         true
+      habilitar_receita: true
       nome_display:      "§e§lKit Médico (Completo)"
     kit_parcial:
-      habilitar:         false
-      habilitar_receita: false
+      habilitar:         true
+      habilitar_receita: true
       nome_display:      "§c§lKit Médico (Parcial)"
     tls_tracker_compass:
       habilitar:         true

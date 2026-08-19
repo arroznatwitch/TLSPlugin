@@ -111,13 +111,13 @@ tab:
 # --- Configurações de Revive e Kits Médicos ---
 revive:
   # Desativa completamente o sistema de revives se falso
-  habilitar: false
+  habilitar: true
 
   # O jogador morto é forçado para SPECTATOR (Modo Espectador)
   forcamorte_spectator: true
 
   # O corpo (ArmorStand) deve ser criado para ser revivido
-  habilitar_corpo_revive: false
+  habilitar_corpo_revive: true
 
   # Resistência que o jogador ganha ao ser revivido com sucesso
   efeito_resistencia:
@@ -176,6 +176,26 @@ mensagens_comandos:
   jogo_retomando: "§f[§bTLS§f] §aRetomando o jogo em instantes..."
   borda_setada: "§f[§bTLS§f] §eBorda inicial configurada com sucesso."
   mvp_sem_dados: "§f[§bTLS§f] §eAinda não existem dados de MVP."
+  jogo_ja_a_decorrer: "§f[§bTLS§f] §cJá existe um jogo a decorrer! Usa §f/endgame §cprimeiro."
+  # Mostrado quando alguém escreve "confirmar" sem ter corrido o comando base antes.
+  confirmacao_invalida: "§f[§bTLS§f] §cNão tens nenhuma confirmação pendente. Corre o comando sem argumentos primeiro."
+
+# --- Snapshot de Stats à Morte ---
+# Sempre que um jogador morre, guarda um ficheiro com as stats dele nesse momento em
+# plugins/tlsplugin/mortes/. Útil para conferir disputas e reconstruir o que aconteceu,
+# já que o mvp_stats.yml vai sendo sobrescrito ao longo do jogo.
+mvp_snapshot_morte:
+  habilitar: true
+  # Avisa os OPs no chat com um resumo + nome do ficheiro guardado.
+  avisar_ops: true
+
+# --- Pausa (geral, usado por /pause, /aceitarpausa, /startgame) ---
+pausa:
+  # Música tocada aos jogadores (não-OP) enquanto o jogo está pausado. Desliga se não quiseres som.
+  musica_habilitar: true
+  # Avisa todos os OPs no chat sempre que o jogo é pausado (por qualquer meio).
+  avisar_ops_no_chat: true
+  mensagem_aviso_ops: "§f[§bTLS§f] §e⏸ §f{player} §epausou o jogo. §7Motivo§8: §f{motivo}"
 
 # --- Pausa por Jogador (/pedirpausa / /aceitarpausa) ---
 pausa_jogador:
@@ -427,11 +447,11 @@ craft_book:
       habilitar: true
       habilitar_receita: true
     kit_completo:
-      habilitar: false
-      habilitar_receita: false
+      habilitar: true
+      habilitar_receita: true
     kit_parcial:
-      habilitar: false
-      habilitar_receita: false
+      habilitar: true
+      habilitar_receita: true
 # --- Comando /pronto ---
 pronto:
   prefixo: "§f[§bTLS§f] "
@@ -501,7 +521,7 @@ border_announcer:
 # bloco no centro (0,0) em "borda_tempo_segundos". Fica desligado por predefinição — só
 # liga se quiseres mesmo este modo extra no fim do evento.
 sudden_death:
-  habilitar: false
+  habilitar: true
   delay_minutos: 5
   lava_camada_alvo: 64
   borda_tempo_segundos: 300
@@ -522,6 +542,18 @@ sudden_death:
     inicio: "§f[§bTLS§f] §4§l☠ MORTE SÚBITA INICIADA! §cA lava está a subir e a borda vai fechar completamente!"
     lava_subindo: "§f[§bTLS§f] §c⚠ A lava está a subir! Nível atual§8: §fY = {y}"
     fim: "§f[§bTLS§f] §4§l☠ A morte súbita terminou."
+
+# --- Baú de Morte ---
+# Qualquer morte deixa um baú no local com os itens do jogador. Em modo equipas, a Sea
+# Lantern do revive fica UM BLOCO ACIMA do baú, para os dois não se sobreporem.
+bau_morte:
+  habilitar: true
+  # Só se parte com a mão vazia (com machado/ferramenta o baú aguenta).
+  apenas_mao: true
+  # TNT e outras explosões não destroem o baú.
+  imune_explosao: true
+  holograma: "§6💀 Baú de {jogador} §7| §f{morte}"
+  mensagem_precisa_mao: "§f[§bTLS§f] §cEste baú só pode ser partido com a §lmão vazia§c."
 
 # --- Blocos de Equipa ---
 teams:

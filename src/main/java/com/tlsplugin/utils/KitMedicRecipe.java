@@ -32,6 +32,8 @@ import dev.lone.itemsadder.api.Events.ItemsAdderLoadDataEvent;
 public class KitMedicRecipe {
 
     private static JavaPlugin plugin;
+    /** O register() é chamado outra vez a cada reload; sem isto acumulavam-se listeners. */
+    private static boolean listenerRegistered = false;
 
     private static final String ID_KIT_COMPLETO = "tls_plugin:kit_completo";
     private static final String ID_KIT_PARCIAL  = "tls_plugin:kit_parcial";
@@ -42,6 +44,12 @@ public class KitMedicRecipe {
 
     public static void register(JavaPlugin plugin) {
         KitMedicRecipe.plugin = plugin;
+
+        if (listenerRegistered) {
+            registerRecipes(); // só refresca as receitas com a config nova
+            return;
+        }
+        listenerRegistered = true;
 
         Bukkit.getPluginManager().registerEvents(new Listener() {
 

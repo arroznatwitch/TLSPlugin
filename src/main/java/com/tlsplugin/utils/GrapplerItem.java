@@ -13,6 +13,7 @@ public class GrapplerItem implements Listener {
 
     private static JavaPlugin plugin;
     private static final String CUSTOM_ITEM_ID = "tls_plugin:grappler_item";
+    private static boolean listenerRegistered = false;
 
     private GrapplerItem(JavaPlugin plugin) {
         // privado — usar register()
@@ -21,8 +22,12 @@ public class GrapplerItem implements Listener {
     public static void register(JavaPlugin pl) {
         plugin = pl;
 
-        // Regista listener (necessário se no futuro tiver eventos aqui)
-        Bukkit.getPluginManager().registerEvents(new GrapplerItem(plugin), plugin);
+        // Regista listener (necessário se no futuro tiver eventos aqui).
+        // Só uma vez: o register() volta a ser chamado a cada reload.
+        if (!listenerRegistered) {
+            Bukkit.getPluginManager().registerEvents(new GrapplerItem(plugin), plugin);
+            listenerRegistered = true;
+        }
 
         // Remove receita anterior (evita duplicados em reload)
         NamespacedKey key = new NamespacedKey(plugin, "grappler_item");

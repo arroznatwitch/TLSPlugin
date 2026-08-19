@@ -101,6 +101,21 @@ public class CraftBookGui {
         return c != null ? c.getBoolean(path, def) : def;
     }
 
+    /**
+     * Toggles de itens especiais: o config.yml manda.
+     *
+     * <p>Estas chaves existem nos dois ficheiros (gui.yml e config.yml). O /tlsconfig edita
+     * o config.yml, mas este menu lia só o gui.yml — por isso ligar um item na GUI não o
+     * fazia aparecer aqui. Agora o config.yml é a fonte da verdade e o gui.yml só serve de
+     * valor por omissão, para não partir servidores que só tenham lá o valor personalizado.</p>
+     */
+    private static boolean especialAtivo(String chave, boolean def) {
+        String caminho = "craft_book.special_items." + chave + ".habilitar";
+        boolean valorGui = cfgBool(caminho, def);
+        com.tlsplugin.Tlsplugin p = com.tlsplugin.Tlsplugin.getInstance();
+        return p != null ? p.getConfig().getBoolean(caminho, valorGui) : valorGui;
+    }
+
     // ── Menu Principal ────────────────────────────────────────────────────
     public static void openMain(Player player) {
         ensurePrefixes();
@@ -233,8 +248,7 @@ public class CraftBookGui {
 
         int slotIndex = 0;
         for (int i = 0; i < ids.length; i++) {
-            boolean enabled = cfgBool("craft_book.special_items." + configKeys[i] + ".habilitar", true);
-            if (!enabled) continue;
+            if (!especialAtivo(configKeys[i], true)) continue;
             if (slotIndex >= slots.length) break;
 
             String displayName = cfgStr("craft_book.special_items." + configKeys[i] + ".nome_display",

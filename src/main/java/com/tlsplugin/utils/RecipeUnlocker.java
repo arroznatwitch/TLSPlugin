@@ -52,13 +52,19 @@ public final class RecipeUnlocker {
             "tls_plugin:diamond_battleaxe"
     );
 
+    private static boolean listenerRegistered = false;
+
     public static void register(JavaPlugin plugin) {
         // desbloqueia para quem já está online (reloads, etc.)
         for (Player p : Bukkit.getOnlinePlayers()) {
             giveAllTo(plugin, p);
         }
 
-        // desbloqueia no join — com delay para garantir que o jogador está pronto
+        // desbloqueia no join — com delay para garantir que o jogador está pronto.
+        // Só regista uma vez: o register() volta a ser chamado a cada reload.
+        if (listenerRegistered) return;
+        listenerRegistered = true;
+
         Bukkit.getPluginManager().registerEvents(new Listener() {
             @EventHandler
             public void onJoin(PlayerJoinEvent e) {
