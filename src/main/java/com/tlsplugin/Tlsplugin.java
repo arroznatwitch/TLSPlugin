@@ -56,6 +56,7 @@ public class Tlsplugin extends JavaPlugin {
     private WeaponRangeListener        weaponRangeListener;
     private SickleKnockbackListener    sickleKnockbackListener;
     private SuddenDeathManager         suddenDeathManager;
+    private SoundPreferenceManager     soundPreferenceManager;
 
     @Override
     public void onEnable() {
@@ -68,6 +69,8 @@ public class Tlsplugin extends JavaPlugin {
         CraftBookGui.loadConfig(getDataFolder());
 
         // ==== MANAGERS ====
+        // Criado primeiro: os outros managers consultam-no ao tocar sons.
+        this.soundPreferenceManager  = new SoundPreferenceManager(this);
         this.spawnManager            = new SpawnManager(this);
         this.freezeManager           = new GameFreezeManager(this);
         this.borderManager           = new BorderManager(this);
@@ -283,6 +286,7 @@ public class Tlsplugin extends JavaPlugin {
         this.capsuleManager = new CapsuleManager(this, spawnManager);
         getCommand("tlscapsulas").setExecutor(new TlsCapsulasCommand(this, capsuleManager));
         getCommand("tlsteams").setExecutor(new TeamsCommand(this));
+        getCommand("tlssom").setExecutor(new TlsSomCommand(this, soundPreferenceManager));
         Bukkit.getPluginManager().registerEvents(new com.tlsplugin.listeners.TeamWoolListener(this), this);
         ConfigGui configGui = new ConfigGui(this);
         ConfigGuiListener configGuiListener = new ConfigGuiListener(this, configGui);
@@ -390,6 +394,7 @@ public class Tlsplugin extends JavaPlugin {
             mvpStatsManager.tick();   // fecha o troço em curso antes de gravar
             mvpStatsManager.saveStats();
         }
+        if (soundPreferenceManager != null) soundPreferenceManager.save();
         if (trackerCompassListener != null) trackerCompassListener.cleanup();
         if (grapplerItemListener   != null) grapplerItemListener.cleanup();
         if (centerCompassTask      != null) centerCompassTask.stop();
@@ -409,4 +414,5 @@ public class Tlsplugin extends JavaPlugin {
     public TeamManager getTeamManager()                            { return teamManager; }
     public CapsuleManager getCapsuleManager()                      { return capsuleManager; }
     public SuddenDeathManager getSuddenDeathManager()               { return suddenDeathManager; }
+    public SoundPreferenceManager getSoundPreferenceManager()       { return soundPreferenceManager; }
 }

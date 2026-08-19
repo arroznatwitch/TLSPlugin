@@ -110,8 +110,9 @@ public class GameFreezeManager implements Listener {
 
     private void startPauseMusic() {
         if (!Tlsplugin.getInstance().getConfig().getBoolean("pausa.musica_habilitar", true)) return;
+        var som = Tlsplugin.getInstance().getSoundPreferenceManager();
         for (Player p : Bukkit.getOnlinePlayers()) {
-            if (!p.isOp()) p.playSound(p.getLocation(), pauseMusic, 0.8f, 1.0f);
+            if (!p.isOp()) som.play(p, pauseMusic, 0.8f, 1.0f);
         }
     }
 
@@ -415,14 +416,16 @@ public class GameFreezeManager implements Listener {
     }
 
     private void playTick(Sound sound, float pitch) {
+        var som = Tlsplugin.getInstance().getSoundPreferenceManager();
         for (Player p : Bukkit.getOnlinePlayers()) {
-            p.playSound(p.getLocation(), sound, 1.0f, pitch);
+            som.play(p, sound, 1.0f, pitch);
         }
     }
 
     private void playEnd(Sound sound) {
+        var som = Tlsplugin.getInstance().getSoundPreferenceManager();
         for (Player p : Bukkit.getOnlinePlayers()) {
-            p.playSound(p.getLocation(), sound, 1.0f, 1.0f);
+            som.play(p, sound, 1.0f, 1.0f);
         }
     }
 

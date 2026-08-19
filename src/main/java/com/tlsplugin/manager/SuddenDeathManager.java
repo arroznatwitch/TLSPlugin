@@ -141,7 +141,7 @@ public class SuddenDeathManager implements Listener {
         float volume = (float) plugin.getConfig().getDouble("sudden_death.som.volume", 1.0);
         float pitch  = (float) plugin.getConfig().getDouble("sudden_death.som.pitch",  1.0);
         for (Player p : Bukkit.getOnlinePlayers()) {
-            p.playSound(p.getLocation(), sound, volume, pitch);
+            plugin.getSoundPreferenceManager().play(p, sound, volume, pitch);
         }
     }
 

@@ -100,7 +100,7 @@ public class BorderTimerAnnouncer {
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (p.isOp()) continue;
             for (String linha : linhas) p.sendMessage(linha);
-            if (sound != null) p.playSound(p.getLocation(), sound, volume, pitch);
+            if (sound != null) plugin.getSoundPreferenceManager().play(p, sound, volume, pitch);
         }
         Bukkit.getConsoleSender().sendMessage(String.join("\n", linhas));
     }

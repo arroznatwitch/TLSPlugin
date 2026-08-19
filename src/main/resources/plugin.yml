@@ -1,5 +1,5 @@
 name: tlsplugin
-version: "3.16.2"
+version: "3.16.3"
 main: com.tlsplugin.Tlsplugin
 api-version: "1.21"
 author: "ArrozNaTwitch"
@@ -85,5 +85,9 @@ commands:
     description: Dá os 8 blocos de lã para escolha de equipa
     usage: /tlsteams
     permission: tls.admin
+  tlssom:
+    description: Liga/desliga os sons do TLS só para ti
+    usage: /tlssom
+    aliases: [tlssons, tlssound]
   scoreboard:
     description: Toggle da scoreboard

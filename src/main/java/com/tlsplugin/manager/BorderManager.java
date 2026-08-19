@@ -516,7 +516,7 @@ public class BorderManager implements Listener {
             int delay = i * ALERT_INTERVAL_TICKS;
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 p.sendTitle("§c§lCUIDADO!!!", "§eA borda está perto!", 10, 40, 10);
-                p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 0.6f);
+                plugin.getSoundPreferenceManager().play(p, Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 0.6f);
             }, delay);
         }
         Bukkit.getScheduler().runTaskLater(plugin,
