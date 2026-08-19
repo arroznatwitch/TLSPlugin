@@ -36,8 +36,53 @@ public class MVPStatsManager {
         public long lastActivityTime = System.currentTimeMillis();
         public long deathTime = 0; // 0 = vivo; >0 = timestamp da morte
 
+        // ── Tempo vivo: acumulador em vez de "agora - joinTime" ──────────────────
+        // Calcular o tempo como (agora - joinTime) é frágil: o relógio continua a correr
+        // quando o jogador se desliga, quando morre, e durante o downtime do servidor —
+        // e uma queda perdia/inflacionava tudo. Aqui só acumulamos tempo REALMENTE vivo,
+        // validado a cada segundo (ver MVPStatsManager.tick()), e é o acumulado que fica
+        // gravado. Assim uma queda perde no máximo 1 segundo, nunca o progresso todo.
+
+        /** Tempo vivo já confirmado e gravado (ms). Fonte de verdade para os pontos. */
+        public long accumulatedAliveMs = 0;
+        /** 0 = contador parado. Caso contrário, instante em que o contador arrancou. */
+        public long aliveSinceMs = 0;
+
         public PlayerStats(String playerName) {
             this.playerName = playerName;
+        }
+
+        /** Tempo vivo total (ms): o já acumulado + o troço a decorrer, se estiver a contar. */
+        public long getAliveMs() {
+            long total = accumulatedAliveMs;
+            if (aliveSinceMs > 0) {
+                long delta = System.currentTimeMillis() - aliveSinceMs;
+                if (delta > 0) total += delta;
+            }
+            return total;
+        }
+
+        /** Arranca o contador (idempotente — não reinicia se já estiver a contar). */
+        void startCounting(long now) {
+            if (aliveSinceMs == 0) aliveSinceMs = now;
+        }
+
+        /**
+         * Move o troço decorrido para o acumulador e continua a contar. Chamado a cada
+         * segundo: é isto que garante que uma queda do servidor perde ≤1s.
+         */
+        void flush(long now) {
+            if (aliveSinceMs > 0) {
+                long delta = now - aliveSinceMs;
+                if (delta > 0) accumulatedAliveMs += delta;
+                aliveSinceMs = now;
+            }
+        }
+
+        /** Guarda o troço decorrido e para o contador. */
+        void stopCounting(long now) {
+            flush(now);
+            aliveSinceMs = 0;
         }
 
         public double getDDRD() {
@@ -60,11 +105,13 @@ public class MVPStatsManager {
             return 0;
         }
 
+        /**
+         * @param totalPausedMs ignorado — as pausas já são tratadas parando o contador,
+         *                      logo subtrair aqui contava a mesma pausa duas vezes.
+         *                      Mantido só para não partir as chamadas existentes.
+         */
         public long getAliveTimeMinutes(long totalPausedMs) {
-            long endTime = deathTime > 0 ? deathTime : System.currentTimeMillis();
-            long aliveMs = endTime - joinTime - totalPausedMs;
-            if (aliveMs < 0) aliveMs = 0;
-            return TimeUnit.MILLISECONDS.toMinutes(aliveMs);
+            return TimeUnit.MILLISECONDS.toMinutes(getAliveMs());
         }
 
         @Deprecated
@@ -72,11 +119,9 @@ public class MVPStatsManager {
             return getAliveTimeMinutes(0);
         }
 
+        /** @param totalPausedMs ignorado — ver {@link #getAliveTimeMinutes(long)}. */
         public int calculateTimePoints(long totalPausedMs) {
-            long endTime = deathTime > 0 ? deathTime : System.currentTimeMillis();
-            long aliveMs = endTime - joinTime - totalPausedMs;
-            if (aliveMs < 0) aliveMs = 0;
-            long aliveMinutes = TimeUnit.MILLISECONDS.toMinutes(aliveMs);
+            long aliveMinutes = TimeUnit.MILLISECONDS.toMinutes(getAliveMs());
 
             FileConfiguration config = Tlsplugin.getInstance().getConfig();
             boolean devMode = config.getBoolean("game.modo-desenvolvedor", false);
@@ -142,6 +187,7 @@ public class MVPStatsManager {
         if (currentlyPaused) return;
         currentlyPaused = true;
         pauseStartMs = System.currentTimeMillis();
+        tick(); // para já os contadores de toda a gente
     }
 
     public void onUnpause() {
@@ -149,6 +195,7 @@ public class MVPStatsManager {
         currentlyPaused = false;
         totalPausedMs += System.currentTimeMillis() - pauseStartMs;
         pauseStartMs = 0;
+        tick(); // retoma a contagem de quem está vivo e em survival
     }
 
     /** Tempo total pausado até agora (inclui pausa ativa, se houver). */
@@ -167,6 +214,12 @@ public class MVPStatsManager {
 
     public void unregisterPlayer(String playerName) {
         // Mantém estatísticas de quem saiu
+    }
+
+    /** Para o relógio de tempo vivo de quem sai ou cai do servidor. */
+    public void onPlayerQuit(String playerName) {
+        PlayerStats stats = playerStats.get(playerName);
+        if (stats != null) stats.stopCounting(System.currentTimeMillis());
     }
 
     public boolean isEligible(String playerName) {
@@ -208,9 +261,11 @@ public class MVPStatsManager {
         if (!gameStarted || !isEligibleInternal(playerName)) return;
         PlayerStats stats = playerStats.get(playerName);
         if (stats != null) {
+            long now = System.currentTimeMillis();
             stats.deaths++;
-            stats.lastActivityTime = System.currentTimeMillis();
-            stats.deathTime = System.currentTimeMillis(); // congela o tempo vivo
+            stats.lastActivityTime = now;
+            stats.deathTime = now;
+            stats.stopCounting(now); // congela o tempo vivo já no instante da morte
         }
     }
 
@@ -229,9 +284,58 @@ public class MVPStatsManager {
         if (!gameStarted) return;
         PlayerStats stats = playerStats.get(revivedPlayerName);
         if (stats != null) {
-            stats.deathTime = 0;                                  // desbloqueia o timer
-            stats.joinTime  = System.currentTimeMillis();         // reinicia contagem de tempo vivo
+            // Só limpamos a marca de morte: o tempo vivo anterior fica no acumulador e a
+            // contagem retoma daí (antes, reiniciar o joinTime apagava tudo o que ele já
+            // tinha acumulado antes de morrer).
+            stats.deathTime = 0;
             stats.lastActivityTime = System.currentTimeMillis();
+            syncPlayer(Bukkit.getPlayerExact(revivedPlayerName));
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Motor do tempo vivo (2 fatores: estado verificado + flush periódico)
+    // ------------------------------------------------------------------
+
+    /**
+     * Fator 1 — o estado tem de estar TODO correto para o relógio andar. Verificado de
+     * raiz a cada segundo, em vez de depender de apanhar cada evento individualmente:
+     * mesmo que um evento se perca, no segundo seguinte a contagem é corrigida.
+     */
+    private boolean deveContar(Player p, PlayerStats stats) {
+        if (!gameStarted || currentlyPaused) return false;   // jogo parado/pausado
+        if (p == null || !p.isOnline())      return false;   // caiu/saiu do servidor
+        if (p.getGameMode() != GameMode.SURVIVAL) return false; // GM3/criativo/adventure
+        return stats.deathTime == 0;                          // morto não conta
+    }
+
+    /** Recalcula, para um jogador, se o relógio deve estar a andar. Seguro com null. */
+    public void syncPlayer(Player p) {
+        if (p == null) return;
+        PlayerStats stats = playerStats.get(p.getName());
+        if (stats == null) return;
+        long now = System.currentTimeMillis();
+        if (deveContar(p, stats)) stats.startCounting(now);
+        else                      stats.stopCounting(now);
+    }
+
+    /**
+     * Fator 2 — chamado a cada segundo. Revalida o estado de toda a gente e move o tempo
+     * decorrido para o acumulador (que é o que fica gravado). É isto que torna o sistema
+     * à prova de quedas: o pior caso é perder 1 segundo, nunca o tempo todo. Também
+     * apanha jogadores que se desligaram sem passar por nenhum evento.
+     */
+    public void tick() {
+        long now = System.currentTimeMillis();
+        for (Map.Entry<String, PlayerStats> entry : playerStats.entrySet()) {
+            PlayerStats stats = entry.getValue();
+            Player p = Bukkit.getPlayerExact(entry.getKey());
+            if (deveContar(p, stats)) {
+                stats.startCounting(now);
+                stats.flush(now);
+            } else {
+                stats.stopCounting(now);
+            }
         }
     }
 
@@ -271,6 +375,54 @@ public class MVPStatsManager {
         saveStats();
     }
 
+    /**
+     * Grava um snapshot das stats de um jogador no momento em que morre, em
+     * {@code plugins/tlsplugin/mortes/}. Serve de registo permanente por morte (útil para
+     * conferir disputas e reconstruir o que aconteceu), independente do mvp_stats.yml, que
+     * é sobrescrito ao longo do jogo.
+     *
+     * @return o ficheiro criado, ou null se não houver stats/ocorreu erro.
+     */
+    public File saveDeathSnapshot(String playerName, String killerName) {
+        PlayerStats stats = playerStats.get(playerName);
+        if (stats == null) return null;
+
+        try {
+            File pasta = new File(Tlsplugin.getInstance().getDataFolder(), "mortes");
+            if (!pasta.exists()) pasta.mkdirs();
+
+            String timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss")
+                    .format(new java.util.Date());
+            File ficheiro = new File(pasta, playerName + "_" + timestamp + ".yml");
+
+            long pausedMs = getEffectivePausedMs();
+            YamlConfiguration yaml = new YamlConfiguration();
+            yaml.set("jogador",          playerName);
+            yaml.set("morreuEm",         timestamp);
+            yaml.set("mortoPor",         killerName == null ? "—" : killerName);
+            yaml.set("pontosTotais",     stats.calculateTotalMVPPoints(pausedMs));
+            yaml.set("tempoVivoMinutos", stats.getAliveTimeMinutes(pausedMs));
+            yaml.set("kills",            stats.kills);
+            yaml.set("assists",          stats.assists);
+            yaml.set("deaths",           stats.deaths);
+            yaml.set("revivals",         stats.revivals);
+            yaml.set("damageGiven",      stats.damageGiven);
+            yaml.set("damageReceived",   stats.damageReceived);
+            yaml.set("ddrd",             stats.getDDRD());
+            yaml.set("pontosDDRD",       stats.calculateDDRDPoints());
+            yaml.set("pontosTempo",      stats.calculateTimePoints(pausedMs));
+            yaml.save(ficheiro);
+
+            Tlsplugin.getInstance().getLogger().info(
+                    "[TLS] Snapshot de morte guardado: mortes/" + ficheiro.getName());
+            return ficheiro;
+        } catch (Exception e) {
+            Tlsplugin.getInstance().getLogger().severe(
+                    "[TLS] Falha ao guardar snapshot de morte de " + playerName + ": " + e.getMessage());
+            return null;
+        }
+    }
+
     public void backupStats() {
         if (playerStats.isEmpty()) return;
         try {
@@ -296,6 +448,8 @@ public class MVPStatsManager {
                 yaml.set(path + "revivals",         stats.revivals);
                 yaml.set(path + "joinTime",         stats.joinTime);
                 yaml.set(path + "lastActivityTime", stats.lastActivityTime);
+                yaml.set(path + "deathTime",        stats.deathTime);
+                yaml.set(path + "accumulatedAliveMs", stats.getAliveMs());
             }
             yaml.save(backupFile);
             File lastGame = new File(dataFolder, "mvp_ultimo_jogo.yml");
@@ -326,6 +480,9 @@ public class MVPStatsManager {
                 yaml.set(path + "joinTime",         stats.joinTime);
                 yaml.set(path + "lastActivityTime", stats.lastActivityTime);
                 yaml.set(path + "deathTime",        stats.deathTime);
+                // Grava o tempo já confirmado + o troço a decorrer, para uma queda entre
+                // dois flushes não perder o segundo em curso.
+                yaml.set(path + "accumulatedAliveMs", stats.getAliveMs());
             }
         }
         try {
@@ -358,6 +515,20 @@ public class MVPStatsManager {
                     stats.joinTime         = yaml.getLong(path + "joinTime");
                     stats.lastActivityTime = yaml.getLong(path + "lastActivityTime");
                     stats.deathTime        = yaml.getLong(path + "deathTime", 0);
+
+                    // O contador NUNCA é restaurado a correr: o servidor esteve em baixo,
+                    // esse tempo não é tempo vivo. Só volta a andar quando o jogador entrar
+                    // e o tick() confirmar que está vivo e em survival.
+                    stats.aliveSinceMs = 0;
+                    if (yaml.contains(path + "accumulatedAliveMs")) {
+                        stats.accumulatedAliveMs = yaml.getLong(path + "accumulatedAliveMs", 0);
+                    } else {
+                        // Ficheiro do formato antigo (só tinha joinTime/deathTime): aproveita
+                        // o que dá para reconstruir, em vez de zerar o jogador.
+                        long fim = stats.deathTime > 0 ? stats.deathTime : System.currentTimeMillis();
+                        long estimado = fim - stats.joinTime - this.totalPausedMs;
+                        stats.accumulatedAliveMs = Math.max(0, estimado);
+                    }
                     playerStats.put(pName, stats);
                 }
             }
@@ -371,10 +542,16 @@ public class MVPStatsManager {
         this.currentlyPaused = false;
         this.gameStartMs    = System.currentTimeMillis();
         long now = System.currentTimeMillis();
+        // Novo jogo: o tempo vivo arranca sempre do zero, mesmo que tenha ficado valor de
+        // um jogo anterior (ex: /startgame depois de uma queda sem /endgame).
         for (PlayerStats stats : playerStats.values()) {
             stats.joinTime = now;
             stats.lastActivityTime = now;
+            stats.deathTime = 0;
+            stats.accumulatedAliveMs = 0;
+            stats.aliveSinceMs = 0;
         }
+        tick(); // arranca a contagem só a quem está vivo e em survival
         saveStats();
     }
 

@@ -45,13 +45,37 @@ public class StartGameCommand implements CommandExecutor {
             return true;
         }
 
+        if (plugin.getBorderManager().isRunning()) {
+            sender.sendMessage("");
+            sender.sendMessage("§c§l  ⚠ Já há um jogo a decorrer");
+            sender.sendMessage("");
+            sender.sendMessage("  " + plugin.getConfig().getString(
+                    "mensagens_comandos.jogo_ja_a_decorrer",
+                    "§cUsa §f/endgame §cprimeiro para terminar o jogo atual."));
+            sender.sendMessage("");
+            return true;
+        }
+
         if (args.length == 0 || !args[0].equalsIgnoreCase("confirmar")) {
+            com.tlsplugin.utils.ConfirmationManager.pedir(sender, "startgame");
             sender.sendMessage("");
             sender.sendMessage("§e§l  ⚠ Iniciar jogo");
             sender.sendMessage("");
             sender.sendMessage("  " + plugin.getConfig().getString(
                     "mensagens_comandos.jogo_confirmar_start",
                     "§eTens a certeza? Digita §f/startgame confirmar §epara prosseguir."));
+            sender.sendMessage("  §7(válido por §f"
+                    + com.tlsplugin.utils.ConfirmationManager.getValidadeSegundos() + "s§7)");
+            sender.sendMessage("");
+            return true;
+        }
+
+        // "confirmar" só vale se o aviso tiver sido mostrado a este sender há pouco tempo.
+        if (!com.tlsplugin.utils.ConfirmationManager.confirmar(sender, "startgame")) {
+            sender.sendMessage("");
+            sender.sendMessage("  " + plugin.getConfig().getString(
+                    "mensagens_comandos.confirmacao_invalida",
+                    "§cNão tens nenhuma confirmação pendente. Corre §f/startgame §cprimeiro."));
             sender.sendMessage("");
             return true;
         }

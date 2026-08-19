@@ -48,12 +48,15 @@ public class AceitarPausaCommand implements CommandExecutor {
             return true;
         }
 
+        // Guardar o motivo ANTES de aceitar (aceitarPedido remove o pedido pendente).
+        String motivo = pauseManager.getMotivoPendente(nick);
+
         // Consumir o uso e limpar pedido
         pauseManager.aceitarPedido(nick);
 
         // Pausar o jogo
         plugin.getBorderManager().setPaused(true);
-        plugin.getFreezeManager().freezeAll();
+        plugin.getFreezeManager().freezeAll(nick, motivo == null ? "" : motivo);
         plugin.getMVPStatsManager().onPause();
 
         // Mensagem global de pausa aceite

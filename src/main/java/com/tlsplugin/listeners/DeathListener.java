@@ -110,6 +110,25 @@ public class DeathListener implements Listener {
             p.sendTitle(title, subtitle, 10, 70, 20);
         }
 
+        // 1.5. Snapshot das stats no momento da morte (registo permanente por morte).
+        if (plugin.getConfig().getBoolean("mvp_snapshot_morte.habilitar", true)) {
+            Player killerSnapshot = p.getKiller();
+            java.io.File ficheiro = mvpStatsManager.saveDeathSnapshot(
+                    p.getName(), killerSnapshot != null ? killerSnapshot.getName() : null);
+
+            if (ficheiro != null && plugin.getConfig().getBoolean("mvp_snapshot_morte.avisar_ops", true)) {
+                MVPStatsManager.PlayerStats st = mvpStatsManager.getStats(p.getName());
+                long pausedMs = mvpStatsManager.getEffectivePausedMs();
+                String aviso = "§f[§bTLS§f] §7📄 Stats de §f" + p.getName() + " §7guardadas §8(§7"
+                        + (st != null ? st.calculateTotalMVPPoints(pausedMs) : 0) + " pts§8, §7"
+                        + (st != null ? st.kills : 0) + "K/" + (st != null ? st.assists : 0) + "A§8) §8→ §7mortes/"
+                        + ficheiro.getName();
+                for (Player online : Bukkit.getOnlinePlayers()) {
+                    if (online.isOp()) online.sendMessage(aviso);
+                }
+            }
+        }
+
         // 2. Forçar espectador
         boolean forceSpectator = plugin.getConfig().getBoolean("revive.forcamorte_spectator", true);
         if (forceSpectator) {

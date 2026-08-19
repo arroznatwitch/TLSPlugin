@@ -138,7 +138,27 @@ public class BorderManager implements Listener {
             this.currentStageIndex    = yaml.getInt("currentStageIndex",      0);
             this.remainingShrinkSeconds = yaml.getInt("remainingShrinkSeconds", 0);
 
+            // Um estado.yml truncado/corrompido por uma queda a meio da escrita pode trazer
+            // valores fora de alcance, que rebentavam depois ao indexar a lista de bordas.
+            if (currentStageIndex < 0 || currentStageIndex >= stages.size()) {
+                plugin.getLogger().warning("[TLS] currentStageIndex inválido no estado.yml ("
+                        + currentStageIndex + ") — ajustado para caber nas " + stages.size() + " bordas.");
+                this.currentStageIndex = Math.max(0, Math.min(currentStageIndex, stages.size() - 1));
+            }
+            if (remainingShrinkSeconds < 0) this.remainingShrinkSeconds = 0;
+
             World w = getTargetWorld();
+            if (w == null) {
+                // O mundo do evento (Multiverse) ainda não está carregado neste ponto do arranque.
+                // Sem isto, o resto do método rebentava com NPE e o estado do jogo ficava por
+                // restaurar. Ficamos pausados à espera de /unpause — o estado guardado mantém-se.
+                plugin.getLogger().warning("[TLS] " + EVENT_WORLD + " ainda não está carregado ao restaurar o"
+                        + " estado do jogo. Jogo fica PAUSADO; usa /unpause quando o mundo estiver pronto.");
+                this.paused          = true;
+                this.crashDetected   = true;
+                this.lastExitWasSafe = lastSafeExit;
+                return;
+            }
 
             // O jogo estava a correr quando o plugin desligou. Quer tenha sido um crash a sério,
             // quer um /stop normal (ex.: pelo painel), pausamos SEMPRE e avisamos ao entrarem —
@@ -452,9 +472,11 @@ public class BorderManager implements Listener {
     }
 
     private void updateBossBarPaused(int seconds) {
-        double nextTarget = (currentStageIndex + 1 < stages.size())
-                ? stages.get(currentStageIndex + 1)
-                : stages.get(currentStageIndex);
+        if (stages.isEmpty()) return;
+        // Índice defensivo: um estado restaurado após queda pode trazer currentStageIndex
+        // fora de alcance, e isto corre logo no arranque antes de qualquer validação.
+        int idx = Math.max(0, Math.min(currentStageIndex, stages.size() - 1));
+        double nextTarget = (idx + 1 < stages.size()) ? stages.get(idx + 1) : stages.get(idx);
         String coord = "±" + (int) (nextTarget / 2);
 
         String pausedTemplate = plugin.getConfig().getString("bossbar_template_pausada",

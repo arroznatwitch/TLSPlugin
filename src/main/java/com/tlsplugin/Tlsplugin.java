@@ -134,6 +134,7 @@ public class Tlsplugin extends JavaPlugin {
             @EventHandler
             public void onJoin(PlayerJoinEvent e) {
                 mvpStatsManager.registerPlayer(e.getPlayer().getName());
+                mvpStatsManager.syncPlayer(e.getPlayer());
                 goldPotionListener.applyBaseLore(e.getPlayer());
                 teamManager.syncPlayer(e.getPlayer());
 
@@ -156,8 +157,19 @@ public class Tlsplugin extends JavaPlugin {
             }
             @EventHandler
             public void onQuit(PlayerQuitEvent e) {
+                // Para já o relógio de tempo vivo de quem sai/cai (o tick() também apanha
+                // isto, mas assim o corte é imediato e fica gravado no save seguinte).
+                mvpStatsManager.onPlayerQuit(e.getPlayer().getName());
                 mvpStatsManager.unregisterPlayer(e.getPlayer().getName());
                 prontoCommand.remover(e.getPlayer().getUniqueId());
+            }
+
+            // O tempo vivo só corre em Survival: mudar para GM3/criativo/adventure congela.
+            // Corre 1 tick depois para o gamemode novo já estar aplicado ao jogador.
+            @EventHandler
+            public void onGameModeChange(org.bukkit.event.player.PlayerGameModeChangeEvent e) {
+                Bukkit.getScheduler().runTask(Tlsplugin.this, () ->
+                        mvpStatsManager.syncPlayer(e.getPlayer()));
             }
         }, this);
 
@@ -219,6 +231,7 @@ public class Tlsplugin extends JavaPlugin {
         // de rede já estão prontos — por isso não chamamos create() aqui.
         for (Player p : Bukkit.getOnlinePlayers()) {
             mvpStatsManager.registerPlayer(p.getName());
+            mvpStatsManager.syncPlayer(p);
             goldPotionListener.applyBaseLore(p);
             darCraftBook(p);
         }
@@ -228,6 +241,12 @@ public class Tlsplugin extends JavaPlugin {
         // Compass na action bar a apontar pro centro (0,0) — cede a vez ao grappler
         this.centerCompassTask = new CenterCompassTask(this, grapplerItemListener, trackerCompassListener);
         this.centerCompassTask.start();
+
+        // Relógio do tempo vivo: revalida o estado de todos e move o tempo decorrido para
+        // o acumulador. Correr a cada segundo é o que limita a perda a 1s numa queda.
+        Bukkit.getScheduler().runTaskTimer(this, () -> {
+            if (mvpStatsManager != null) mvpStatsManager.tick();
+        }, 20L, 20L);
 
         // Auto-save MVP a cada minuto
         Bukkit.getScheduler().runTaskTimer(this, () -> {
@@ -367,7 +386,10 @@ public class Tlsplugin extends JavaPlugin {
             borderManager.markSafeExit();
         }
         if (borderTimerAnnouncer != null) borderTimerAnnouncer.stop();
-        if (mvpStatsManager != null) mvpStatsManager.saveStats();
+        if (mvpStatsManager != null) {
+            mvpStatsManager.tick();   // fecha o troço em curso antes de gravar
+            mvpStatsManager.saveStats();
+        }
         if (trackerCompassListener != null) trackerCompassListener.cleanup();
         if (grapplerItemListener   != null) grapplerItemListener.cleanup();
         if (centerCompassTask      != null) centerCompassTask.stop();

@@ -33,6 +33,11 @@ public class PlayerPauseManager {
         return pedidosPendentes.containsKey(nick.toLowerCase());
     }
 
+    /** Motivo do pedido pendente, ou null se não houver pedido. */
+    public String getMotivoPendente(String nick) {
+        return pedidosPendentes.get(nick.toLowerCase());
+    }
+
     /**
      * Aceita o pedido pendente: incrementa o uso e remove o pedido.
      * Deve ser chamado pelo AceitarPausaCommand.

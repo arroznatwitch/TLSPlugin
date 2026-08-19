@@ -35,7 +35,7 @@ public class PauseCommand implements CommandExecutor {
         }
 
         borderManager.setPaused(true);
-        freezeManager.freezeAll();
+        freezeManager.freezeAll(sender.getName(), "Pausa manual (/pause)");
         mvpStatsManager.onPause();
 
         sender.sendMessage("");

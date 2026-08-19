@@ -1,6 +1,7 @@
 package com.tlsplugin.manager;
 
 import com.tlsplugin.Tlsplugin;
+import com.tlsplugin.utils.SoundUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
@@ -88,17 +89,10 @@ public class BorderTimerAnnouncer {
             String soundName = plugin.getConfig().getString("border_announcer.som.tipo", "BLOCK_NOTE_BLOCK_PLING");
             volume = (float) plugin.getConfig().getDouble("border_announcer.som.volume", 1.0);
             pitch  = (float) plugin.getConfig().getDouble("border_announcer.som.pitch",  1.0);
-            // As chaves reais do registry usam pontos (ex: "block.note_block.pling"), não
-            // sublinhados — por isso NamespacedKey.minecraft(soundName.toLowerCase()) falhava
-            // sempre. Convertemos a key de cada som (pontos → underscore) e comparamos com o
-            // nome configurado (ex: BLOCK_NOTE_BLOCK_PLING).
-            for (Sound s : org.bukkit.Registry.SOUNDS) {
-                String keyAsEnumStyle = s.key().value().replace('.', '_');
-                if (keyAsEnumStyle.equalsIgnoreCase(soundName)) { sound = s; break; }
-            }
+            sound = SoundUtils.resolve(soundName);
             if (sound == null) {
                 plugin.getLogger().warning("[TLS] Som inválido no border_announcer.som.tipo: '" + soundName + "'. A usar BLOCK_NOTE_BLOCK_PLING.");
-                sound = Sound.BLOCK_NOTE_BLOCK_PLING;
+                sound = SoundUtils.resolve("BLOCK_NOTE_BLOCK_PLING");
             }
         }
 

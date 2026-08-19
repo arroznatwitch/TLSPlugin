@@ -85,6 +85,23 @@ public class GameFreezeManager implements Listener {
         }
     }
 
+    /** Avisa todos os OPs no chat que o jogo foi pausado (quem pausou + motivo). */
+    private void avisarOpsPausa(String quemPausou, String motivo) {
+        var config = Tlsplugin.getInstance().getConfig();
+        if (!config.getBoolean("pausa.avisar_ops_no_chat", true)) return;
+
+        String semMotivo = "§7(sem motivo)";
+        String msg = config.getString("pausa.mensagem_aviso_ops",
+                        "§f[§bTLS§f] §e⏸ §f{player} §epausou o jogo. §7Motivo§8: §f{motivo}")
+                .replace("{player}", quemPausou)
+                .replace("{motivo}", (motivo == null || motivo.isEmpty()) ? semMotivo : motivo);
+
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (p.isOp()) p.sendMessage(msg);
+        }
+        Bukkit.getConsoleSender().sendMessage(msg);
+    }
+
     // ----------------------------------------------------------------
     //  Música
     // ----------------------------------------------------------------
@@ -92,6 +109,7 @@ public class GameFreezeManager implements Listener {
     private BukkitTask musicLoopTask = null;
 
     private void startPauseMusic() {
+        if (!Tlsplugin.getInstance().getConfig().getBoolean("pausa.musica_habilitar", true)) return;
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (!p.isOp()) p.playSound(p.getLocation(), pauseMusic, 0.8f, 1.0f);
         }
@@ -126,9 +144,19 @@ public class GameFreezeManager implements Listener {
         return Tlsplugin.getInstance().getBorderManager().getTargetWorld();
     }
 
+    /** Pausa sem indicar quem pausou (ex: recuperação de crash). */
     public void freezeAll() {
+        freezeAll("Servidor", "");
+    }
+
+    /**
+     * @param quemPausou nome de quem pausou (jogador ou "Servidor"), mostrado aos OPs
+     * @param motivo     motivo opcional; vazio se não houver
+     */
+    public void freezeAll(String quemPausou, String motivo) {
         frozen = true;
         pauseWorldTicking();
+        avisarOpsPausa(quemPausou, motivo);
 
         for (Entity e : getEventWorld().getEntities()) {
             if (e instanceof LivingEntity mob && !(e instanceof Player)) {
