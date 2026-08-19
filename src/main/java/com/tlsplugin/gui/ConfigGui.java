@@ -39,6 +39,7 @@ public class ConfigGui {
         ICONS.put("gamerules",             Material.COMMAND_BLOCK);
         ICONS.put("assist_janela_segundos",Material.EXPERIENCE_BOTTLE);
         ICONS.put("mensagens_comandos",    Material.WRITABLE_BOOK);
+        ICONS.put("bau_morte",             Material.CHEST);
         ICONS.put("pausa",                 Material.NOTE_BLOCK);
         ICONS.put("mvp_snapshot_morte",    Material.WRITTEN_BOOK);
         ICONS.put("pausa_jogador",         Material.CLOCK);
@@ -93,6 +94,7 @@ public class ConfigGui {
         DISPLAY_NAMES.put("gamerules",              "Regras do Jogo");
         DISPLAY_NAMES.put("assist_janela_segundos", "Janela de Assist (s)");
         DISPLAY_NAMES.put("mensagens_comandos",     "Mensagens de Comandos");
+        DISPLAY_NAMES.put("bau_morte",              "Baú de Morte");
         DISPLAY_NAMES.put("pausa",                  "Pausa (Geral)");
         DISPLAY_NAMES.put("mvp_snapshot_morte",     "Snapshot de Stats à Morte");
         DISPLAY_NAMES.put("pausa_jogador",          "Pausa por Jogador");

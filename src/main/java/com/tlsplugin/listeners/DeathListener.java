@@ -121,12 +121,20 @@ public class DeathListener implements Listener {
                 long pausedMs = mvpStatsManager.getEffectivePausedMs();
                 String aviso = "§f[§bTLS§f] §7📄 Stats de §f" + p.getName() + " §7guardadas §8(§7"
                         + (st != null ? st.calculateTotalMVPPoints(pausedMs) : 0) + " pts§8, §7"
-                        + (st != null ? st.kills : 0) + "K/" + (st != null ? st.assists : 0) + "A§8) §8→ §7mortes/"
+                        + (st != null ? st.getKills() : 0) + "K/" + (st != null ? st.assists : 0) + "A§8) §8→ §7mortes/"
                         + ficheiro.getName();
                 for (Player online : Bukkit.getOnlinePlayers()) {
                     if (online.isOp()) online.sendMessage(aviso);
                 }
             }
+        }
+
+        // 1.7. Baú de morte — QUALQUER morte deixa um baú com os itens no local.
+        //      Feito antes do resto para os itens não chegarem a cair no chão.
+        Block bauCriado = null;
+        if (plugin.getConfig().getBoolean("bau_morte.habilitar", true)) {
+            bauCriado = plugin.getDeathChestManager().place(p, deathLoc, event.getDrops());
+            if (bauCriado != null) event.getDrops().clear();
         }
 
         // 2. Forçar espectador
@@ -141,7 +149,12 @@ public class DeathListener implements Listener {
         }
 
         // 3. Sistema de Revive (Corpo/Holograma) — apenas em modo equipas com revive ativo
-        if (!usarRevive || !plugin.getConfig().getBoolean("revive.habilitar_corpo_revive", false)) {
+        boolean comRevive = usarRevive
+                && plugin.getConfig().getBoolean("revive.habilitar_corpo_revive", false);
+
+        if (!comRevive) {
+            // Sem revive não há Sea Lantern, portanto o holograma do baú fica logo por cima.
+            if (bauCriado != null) plugin.getDeathChestManager().createHologram(bauCriado, p, 0.0);
             return;
         }
 
@@ -149,17 +162,28 @@ public class DeathListener implements Listener {
         event.setDroppedExp(0);
         removeBody(p.getName());
 
-        Block deathBlock = deathLoc.getBlock();
-        if (deathBlock.getType().isSolid()) {
-            deathBlock = deathLoc.clone().add(0, 1, 0).getBlock();
+        // A Sea Lantern do revive sobe para cima do baú, para os dois não ficarem no mesmo
+        // bloco. Fica: baú em baixo, lantern por cima, hologramas acima de ambos.
+        Block deathBlock;
+        if (bauCriado != null) {
+            deathBlock = bauCriado.getRelative(0, 1, 0);
+        } else {
+            deathBlock = deathLoc.getBlock();
+            if (deathBlock.getType().isSolid()) {
+                deathBlock = deathLoc.clone().add(0, 1, 0).getBlock();
+            }
         }
 
         deathBlock.setType(Material.SEA_LANTERN);
         deathBlock.setMetadata(METADATA_BLOCO_KEY, new FixedMetadataValue(plugin, p.getName()));
         deathBlockLocations.put(p.getName(), deathBlock.getLocation());
 
+        // Holograma do baú (linha de cima) e o do revive 0.3 acima — a mesma distância que
+        // duas linhas de um holograma normal, para lerem como um bloco de texto só.
+        if (bauCriado != null) plugin.getDeathChestManager().createHologram(bauCriado, p, 1.0);
+
         ArmorStand hologramStand = (ArmorStand) deathBlock.getWorld().spawnEntity(
-                deathBlock.getLocation().clone().add(0.5, 1.2, 0.5),
+                deathBlock.getLocation().clone().add(0.5, bauCriado != null ? 1.5 : 1.2, 0.5),
                 EntityType.ARMOR_STAND
         );
         hologramStand.setGravity(false);

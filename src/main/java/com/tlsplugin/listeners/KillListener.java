@@ -38,6 +38,19 @@ public class KillListener implements Listener {
         // 1. Morte da vítima
         mvpStatsManager.addDeath(victim.getName());
 
+        // Suicídio não é kill nem team-kill: sem crédito e sem penalização.
+        if (killer != null && killer.equals(victim)) {
+            pvpListener.clearTracker(victim.getUniqueId());
+            return;
+        }
+
+        // Team-kill: só existe em modo equipas e quando ambos estão na MESMA Team.
+        if (killer != null && isTeamKill(killer, victim)) {
+            handleTeamKill(killer, victim);
+            pvpListener.clearTracker(victim.getUniqueId());
+            return;
+        }
+
         if (killer != null) {
             // 2. Kill
             mvpStatsManager.addKill(killer.getName());
@@ -110,5 +123,34 @@ public class KillListener implements Listener {
             // Morte sem killer — limpar tracker
             pvpListener.clearTracker(victim.getUniqueId());
         }
+    }
+
+    /** True se ambos estão na mesma Team do scoreboard (só faz sentido em modo equipas). */
+    private boolean isTeamKill(Player killer, Player victim) {
+        if (plugin.isSoloMode()) return false;
+        org.bukkit.scoreboard.Team tk = killer.getScoreboard().getEntryTeam(killer.getName());
+        org.bukkit.scoreboard.Team tv = victim.getScoreboard().getEntryTeam(victim.getName());
+        return tk != null && tv != null && tk.equals(tv);
+    }
+
+    /**
+     * Penaliza quem matou um colega: −1 kill, sem cura, sem cabeça e sem assists.
+     * O contador pode ficar negativo (ver MVPStatsManager.addTeamKill) — o jogador vê 0,
+     * mas a próxima kill legítima só o traz de volta a 0 em vez de lhe dar ponto.
+     */
+    private void handleTeamKill(Player killer, Player victim) {
+        mvpStatsManager.addTeamKill(killer.getName());
+
+        String msg = plugin.getConfig().getString(
+                        "mensagens.team_kill",
+                        "§f[§bTLS§f] §4☠ §f§l{killer} §cmatou o colega de equipa §f§l{victim}§c! §7(−1 kill)")
+                .replace("{killer}", killer.getName())
+                .replace("{victim}", victim.getName());
+        Tlsplugin.broadcast(msg);
+
+        String aviso = plugin.getConfig().getString(
+                "mensagens.team_kill_aviso",
+                "§c⚠ Mataste um colega de equipa! Perdeste 1 kill.");
+        killer.sendMessage(aviso);
     }
 }

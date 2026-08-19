@@ -57,6 +57,7 @@ public class Tlsplugin extends JavaPlugin {
     private SickleKnockbackListener    sickleKnockbackListener;
     private SuddenDeathManager         suddenDeathManager;
     private SoundPreferenceManager     soundPreferenceManager;
+    private DeathChestManager          deathChestManager;
 
     @Override
     public void onEnable() {
@@ -71,6 +72,8 @@ public class Tlsplugin extends JavaPlugin {
         // ==== MANAGERS ====
         // Criado primeiro: os outros managers consultam-no ao tocar sons.
         this.soundPreferenceManager  = new SoundPreferenceManager(this);
+        this.deathChestManager       = new DeathChestManager(this);
+        Bukkit.getPluginManager().registerEvents(deathChestManager, this);
         this.spawnManager            = new SpawnManager(this);
         this.freezeManager           = new GameFreezeManager(this);
         this.borderManager           = new BorderManager(this);
@@ -415,4 +418,5 @@ public class Tlsplugin extends JavaPlugin {
     public CapsuleManager getCapsuleManager()                      { return capsuleManager; }
     public SuddenDeathManager getSuddenDeathManager()               { return suddenDeathManager; }
     public SoundPreferenceManager getSoundPreferenceManager()       { return soundPreferenceManager; }
+    public DeathChestManager getDeathChestManager()                 { return deathChestManager; }
 }

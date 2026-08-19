@@ -76,7 +76,7 @@ public class AboutMVPCommand implements CommandExecutor {
         sender.sendMessage(plugin.getConfig().getString("mvp_design.secao_combate", "§f⚔ §lCombate"));
 
         sender.sendMessage(plugin.getConfig().getString("mvp_design.formato_kills", "  §7Kills:   §a{val} §8(+{pts} pts)")
-                .replace("{val}", String.valueOf(stats.kills)).replace("{pts}", String.valueOf(stats.kills * 8)));
+                .replace("{val}", String.valueOf(stats.getKills())).replace("{pts}", String.valueOf(stats.getKills() * 8)));
         sender.sendMessage(plugin.getConfig().getString("mvp_design.formato_assists", "  §7Assists: §a{val} §8(+{pts} pts)")
                 .replace("{val}", String.valueOf(stats.assists)).replace("{pts}", String.valueOf(stats.assists * 3)));
         sender.sendMessage(plugin.getConfig().getString("mvp_design.formato_mortes", "  §7Mortes:  §c{val} §8({pts} pts)")

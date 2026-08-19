@@ -28,6 +28,11 @@ public class MVPStatsManager {
         public String playerName;
         public double damageGiven = 0;
         public double damageReceived = 0;
+        /**
+         * Contador BRUTO de kills — pode ser negativo por penalização de team-kill.
+         * Para mostrar ao jogador ou pontuar, usa sempre {@link #getKills()}, que nunca
+         * desce abaixo de 0.
+         */
         public int kills = 0;
         public int assists = 0;
         public int deaths = 0;
@@ -87,6 +92,11 @@ public class MVPStatsManager {
 
         public double getDDRD() {
             return damageGiven - damageReceived;
+        }
+
+        /** Kills visíveis/pontuáveis: o bruto, mas nunca abaixo de 0. */
+        public int getKills() {
+            return Math.max(0, kills);
         }
 
         public int calculateDDRDPoints() {
@@ -165,7 +175,7 @@ public class MVPStatsManager {
             int points = 0;
             points += calculateDDRDPoints();
             points += calculateTimePoints(totalPausedMs);
-            points += kills   * config.getInt("mvp_pontos.kill",   8);
+            points += getKills() * config.getInt("mvp_pontos.kill", 8);
             points += assists * config.getInt("mvp_pontos.assist",  3);
             points += deaths  * config.getInt("mvp_pontos.morte",  -6);
             points += revivals* config.getInt("mvp_pontos.revive",  5);
@@ -249,6 +259,20 @@ public class MVPStatsManager {
         if (!gameStarted || !isEligibleInternal(playerName)) return;
         PlayerStats stats = playerStats.get(playerName);
         if (stats != null) { stats.kills++; stats.lastActivityTime = System.currentTimeMillis(); }
+    }
+
+    /**
+     * Penalização por matar um colega de equipa: −1 kill.
+     *
+     * <p>O contador interno pode ficar negativo de propósito — é isso que faz a penalização
+     * "colar". Quem tem 0 kills e mata um colega fica com −1 (mostrado como 0), e a kill
+     * legítima seguinte só o traz de volta a 0. Sem permitir o negativo, a penalização
+     * seria apagada de imediato pelo clamp e não custaria nada.</p>
+     */
+    public void addTeamKill(String playerName) {
+        if (!gameStarted || !isEligibleInternal(playerName)) return;
+        PlayerStats stats = playerStats.get(playerName);
+        if (stats != null) { stats.kills--; stats.lastActivityTime = System.currentTimeMillis(); }
     }
 
     public void addAssist(String playerName) {
@@ -402,7 +426,10 @@ public class MVPStatsManager {
             yaml.set("mortoPor",         killerName == null ? "—" : killerName);
             yaml.set("pontosTotais",     stats.calculateTotalMVPPoints(pausedMs));
             yaml.set("tempoVivoMinutos", stats.getAliveTimeMinutes(pausedMs));
-            yaml.set("kills",            stats.kills);
+            yaml.set("kills",            stats.getKills());
+            // Guardamos também o bruto: se estiver negativo, mostra que ficou a dever
+            // kills por ter matado colegas de equipa.
+            yaml.set("killsBruto",       stats.kills);
             yaml.set("assists",          stats.assists);
             yaml.set("deaths",           stats.deaths);
             yaml.set("revivals",         stats.revivals);
