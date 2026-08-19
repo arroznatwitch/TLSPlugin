@@ -173,8 +173,11 @@ public class KitMedicRecipe {
                 healer.getWorld().playSound(healer.getLocation(),
                         Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.2f);
 
+                // Aceita as duas grafias: o config.yml usa {target} e o valor por omissão
+                // aqui usava {alvo}, o que deixava o placeholder à vista na mensagem.
                 String msgHealer = tlsPlugin.getConfig()
-                        .getString("mensagens_revive.revive_sucesso_healer", "§aReviveste {alvo}!")
+                        .getString("mensagens_revive.revive_sucesso_healer", "§aReviveste {target}!")
+                        .replace("{target}", target.getName())
                         .replace("{alvo}", target.getName());
                 String msgTarget = tlsPlugin.getConfig()
                         .getString("mensagens_revive.revive_sucesso_alvo", "§aFoste revivido por {healer}!")

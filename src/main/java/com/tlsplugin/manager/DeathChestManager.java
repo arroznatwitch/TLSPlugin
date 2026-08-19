@@ -1,11 +1,13 @@
 package com.tlsplugin.manager;
 
 import com.tlsplugin.Tlsplugin;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
 import org.bukkit.entity.ArmorStand;
@@ -20,6 +22,7 @@ import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -44,11 +47,14 @@ public class DeathChestManager implements Listener {
     private final NamespacedKey chaveDono;
     /** Liga o holograma ao baú a que pertence (para o limpar quando o baú desaparece). */
     private final NamespacedKey chaveHologramaDe;
+    /** Identificador partilhado pelas duas metades do baú e pelo holograma. */
+    private final NamespacedKey chaveAncora;
 
     public DeathChestManager(Tlsplugin plugin) {
         this.plugin           = plugin;
         this.chaveDono        = new NamespacedKey(plugin, "bau_morte_dono");
         this.chaveHologramaDe = new NamespacedKey(plugin, "bau_morte_holograma");
+        this.chaveAncora      = new NamespacedKey(plugin, "bau_morte_ancora");
     }
 
     // ── Criação ───────────────────────────────────────────────────────────────
@@ -65,29 +71,38 @@ public class DeathChestManager implements Listener {
         Block bloco = encontrarLocalLivre(base);
         if (bloco == null) return null;
 
-        bloco.setType(Material.CHEST);
+        // Armadura e hotbar primeiro, para quem chegar ao baú ver logo o equipamento.
+        List<ItemStack> ordenados = ordenarItens(vitima, drops);
 
-        // Força SINGLE: se dois jogadores morrerem em blocos adjacentes, os baús não podem
-        // juntar-se num baú duplo — isso misturaria os itens dos dois e daria uma só
-        // proteção partilhada em vez de uma por baú.
-        org.bukkit.block.data.BlockData dados = bloco.getBlockData();
-        if (dados instanceof org.bukkit.block.data.type.Chest dadosBau) {
-            dadosBau.setType(org.bukkit.block.data.type.Chest.Type.SINGLE);
-            bloco.setBlockData(dadosBau, false);
+        // Um inventário cheio (36 + 4 armaduras + offhand) não cabe nos 27 slots de um baú
+        // simples, por isso passamos a duplo quando é preciso e há espaço ao lado.
+        Block segundo = null;
+        if (ordenados.size() > 27) segundo = encontrarAdjacenteLivre(bloco);
+
+        String ancora = chaveLocal(bloco.getLocation());
+
+        if (segundo != null) {
+            // Regra do vanilla: com type=LEFT a outra metade está em facing.horário; com
+            // type=RIGHT está em facing.anti-horário. Com facing NORTE, LEFT liga a ESTE.
+            criarMetade(bloco,  org.bukkit.block.data.type.Chest.Type.LEFT,  BlockFace.NORTH);
+            criarMetade(segundo, org.bukkit.block.data.type.Chest.Type.RIGHT, BlockFace.NORTH);
+            marcar(bloco,  vitima.getName(), ancora);
+            marcar(segundo, vitima.getName(), ancora);
+        } else {
+            // SINGLE forçado: dois jogadores a morrer em blocos adjacentes não podem formar
+            // um baú duplo acidental, que misturaria os itens e daria uma proteção só.
+            criarMetade(bloco, org.bukkit.block.data.type.Chest.Type.SINGLE, BlockFace.NORTH);
+            marcar(bloco, vitima.getName(), ancora);
         }
 
+        // Com baú duplo é preciso getInventory() (54 slots); no simples usamos
+        // getBlockInventory() para nunca escrever na metade de outro baú por engano.
         BlockState estado = bloco.getState();
-        if (!(estado instanceof Chest bau)) return null;
-        bau.getPersistentDataContainer().set(chaveDono, PersistentDataType.STRING, vitima.getName());
-        bau.update(true, false);
-
-        // Encher: o baú tem 27 slots e um inventário completo pode trazer mais pilhas do
-        // que isso, por isso o que sobrar cai no chão em vez de desaparecer.
-        BlockState novo = bloco.getState();
-        if (novo instanceof Chest bauAberto) {
-            for (ItemStack item : drops) {
+        if (estado instanceof Chest bauAberto) {
+            var inv = (segundo != null) ? bauAberto.getInventory() : bauAberto.getBlockInventory();
+            for (ItemStack item : ordenados) {
                 if (item == null || item.getType().isAir()) continue;
-                Map<Integer, ItemStack> sobra = bauAberto.getBlockInventory().addItem(item);
+                Map<Integer, ItemStack> sobra = inv.addItem(item);
                 for (ItemStack resto : sobra.values()) {
                     world.dropItemNaturally(bloco.getLocation().add(0.5, 1, 0.5), resto);
                 }
@@ -95,6 +110,72 @@ public class DeathChestManager implements Listener {
         }
 
         return bloco;
+    }
+
+    /** Aplica material + tipo/orientação a uma metade do baú. */
+    private void criarMetade(Block bloco, org.bukkit.block.data.type.Chest.Type tipo, BlockFace facing) {
+        bloco.setType(Material.CHEST);
+        org.bukkit.block.data.BlockData dados = bloco.getBlockData();
+        if (dados instanceof org.bukkit.block.data.type.Chest dadosBau) {
+            dadosBau.setType(tipo);
+            dadosBau.setFacing(facing);
+            bloco.setBlockData(dadosBau, false);
+        }
+    }
+
+    /** Marca o bloco como baú de morte (dono + âncora partilhada pelas duas metades). */
+    private void marcar(Block bloco, String dono, String ancora) {
+        BlockState estado = bloco.getState();
+        if (!(estado instanceof Chest bau)) return;
+        bau.getPersistentDataContainer().set(chaveDono,   PersistentDataType.STRING, dono);
+        bau.getPersistentDataContainer().set(chaveAncora, PersistentDataType.STRING, ancora);
+        bau.update(true, false);
+    }
+
+    /**
+     * Ordena os itens: armadura, mão secundária, item na mão, resto da hotbar e por fim o
+     * inventário. Casamos cada posição com o drop correspondente em vez de usar o
+     * inventário diretamente, porque o que realmente cai é a lista de drops (outros
+     * plugins podem tirar ou acrescentar coisas).
+     */
+    private List<ItemStack> ordenarItens(Player vitima, List<ItemStack> drops) {
+        List<ItemStack> prioridade = new ArrayList<>();
+        var inv = vitima.getInventory();
+
+        ItemStack[] armadura = inv.getArmorContents();
+        for (int i = armadura.length - 1; i >= 0; i--) prioridade.add(armadura[i]); // capacete → botas
+        prioridade.add(inv.getItemInOffHand());
+        prioridade.add(inv.getItemInMainHand());
+        for (int i = 0; i < 9; i++)  prioridade.add(inv.getItem(i));   // hotbar
+        for (int i = 9; i < 36; i++) prioridade.add(inv.getItem(i));   // resto
+
+        List<ItemStack> restantes = new ArrayList<>(drops);
+        List<ItemStack> ordenados = new ArrayList<>();
+        for (ItemStack alvo : prioridade) {
+            if (alvo == null || alvo.getType().isAir()) continue;
+            for (java.util.Iterator<ItemStack> it = restantes.iterator(); it.hasNext(); ) {
+                ItemStack candidato = it.next();
+                if (candidato != null && candidato.isSimilar(alvo)
+                        && candidato.getAmount() == alvo.getAmount()) {
+                    ordenados.add(candidato);
+                    it.remove();
+                    break;
+                }
+            }
+        }
+        ordenados.addAll(restantes); // o que não bateu certo vai no fim, sem se perder
+        return ordenados;
+    }
+
+    /**
+     * Bloco para a segunda metade do baú duplo. Só pode ser o de ESTE: as metades são
+     * criadas como LEFT viradas a NORTE, e o vanilla liga um LEFT à metade que está no
+     * sentido horário do facing — para NORTE, isso é ESTE. Se estiver ocupado, fica
+     * simples e o excesso cai no chão.
+     */
+    private Block encontrarAdjacenteLivre(Block bloco) {
+        Block lado = bloco.getRelative(BlockFace.EAST);
+        return podeSubstituir(lado.getType()) ? lado : null;
     }
 
     /** Cria o holograma informativo por cima do baú. */
@@ -110,6 +191,7 @@ public class DeathChestManager implements Listener {
                 .replace("{morte}", killer != null ? "morto por " + killer : "morreu")
                 .replace("{killer}", killer != null ? killer : "—");
 
+        String ancora = lerAncora(bau);
         ArmorStand stand = (ArmorStand) world.spawnEntity(loc, EntityType.ARMOR_STAND);
         stand.setGravity(false);
         stand.setVisible(false);
@@ -117,8 +199,7 @@ public class DeathChestManager implements Listener {
         stand.setInvulnerable(true);
         stand.setCustomNameVisible(true);
         stand.setCustomName(texto);
-        stand.getPersistentDataContainer().set(
-                chaveHologramaDe, PersistentDataType.STRING, chaveLocal(bau.getLocation()));
+        stand.getPersistentDataContainer().set(chaveHologramaDe, PersistentDataType.STRING, ancora);
     }
 
     /**
@@ -188,14 +269,67 @@ public class DeathChestManager implements Listener {
         e.blockList().removeIf(this::isBauDeMorte);
     }
 
+    // ── Auto-remoção quando fica vazio ────────────────────────────────────────
+
+    /** Ao fechar o baú já vazio, ele desaparece com o holograma. */
+    @EventHandler
+    public void onClose(org.bukkit.event.inventory.InventoryCloseEvent e) {
+        verificarVazio(e.getInventory());
+    }
+
+    /**
+     * Também verifica ao clicar, para o baú sumir assim que sai o último item em vez de
+     * só quando o jogador fecha. Um tick depois, para o inventário já estar atualizado.
+     */
+    @EventHandler
+    public void onClick(org.bukkit.event.inventory.InventoryClickEvent e) {
+        org.bukkit.inventory.Inventory inv = e.getInventory();
+        Bukkit.getScheduler().runTask(plugin, () -> verificarVazio(inv));
+    }
+
+    private void verificarVazio(org.bukkit.inventory.Inventory inv) {
+        if (inv == null) return;
+
+        java.util.List<Block> metades = new ArrayList<>();
+        org.bukkit.inventory.InventoryHolder dono = inv.getHolder();
+        if (dono instanceof org.bukkit.block.DoubleChest duplo) {
+            if (duplo.getLeftSide()  instanceof Chest esq) metades.add(esq.getBlock());
+            if (duplo.getRightSide() instanceof Chest dir) metades.add(dir.getBlock());
+        } else if (dono instanceof Chest simples) {
+            metades.add(simples.getBlock());
+        } else {
+            return;
+        }
+
+        if (metades.isEmpty() || !isBauDeMorte(metades.get(0))) return;
+
+        for (ItemStack item : inv.getContents()) {
+            if (item != null && !item.getType().isAir()) return; // ainda tem coisas
+        }
+
+        removerHologramas(metades.get(0)); // antes de apagar os blocos, senão perde a âncora
+        for (Block metade : metades) {
+            if (isBauDeMorte(metade)) metade.setType(Material.AIR);
+        }
+    }
+
     // ── Limpeza ───────────────────────────────────────────────────────────────
 
     /**
      * Remove o(s) holograma(s) ligados a este baú. Procura por entidades à volta em vez de
      * guardar referências em memória, para continuar a funcionar depois de um reinício.
      */
+    private String lerAncora(Block bloco) {
+        BlockState estado = bloco.getState();
+        if (estado instanceof Chest bau) {
+            String a = bau.getPersistentDataContainer().get(chaveAncora, PersistentDataType.STRING);
+            if (a != null) return a;
+        }
+        return chaveLocal(bloco.getLocation());
+    }
+
     private void removerHologramas(Block bau) {
-        String chave = chaveLocal(bau.getLocation());
+        String chave = lerAncora(bau);
         Location centro = bau.getLocation().add(0.5, 1.5, 0.5);
         for (Entity ent : bau.getWorld().getNearbyEntities(centro, 2.5, 4.0, 2.5)) {
             if (!(ent instanceof ArmorStand stand)) continue;

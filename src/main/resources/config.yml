@@ -276,7 +276,7 @@ mensagens_revive:
 
   # --- Mensagens de morte ---
   # Modo equipas com revive ativo:
-  morte_anuncio_chat: "§f[§bTLS§f] §c💀 §f§l{player} §efoi morto! O seu corpo em §f§l{bloco_marcador} §edeve ser reanimado em §f§l{tempo_limite}."
+  morte_anuncio_chat: "§f[§bTLS§f] §c💀 §f§l{player} §efoi morto! O seu corpo em §f§l{bloco_marcador} §edeve ser reanimado em §f§l{tempo_limite} minutos§e."
   # Modo solo ou revive desativado:
   morte_anuncio_chat_simples: "§f[§bTLS§f] §c💀 §f§l{player} §efoi morto por §f§l{killer}§e!"
   morte_anuncio_chat_simples_sem_killer: "§f[§bTLS§f] §c💀 §f§l{player} §emorreu!"

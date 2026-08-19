@@ -342,8 +342,8 @@ public class BorderManager implements Listener {
                         ? stages.get(currentStageIndex + 1)
                         : stages.get(currentStageIndex);
 
-                broadcastFormatted(plugin.getConfig().getString("mensagens.borda_terminou"),
-                        currentStageIndex + 1, stages.size(), nextTarget, 0);
+                // Aviso "A borda X/Y terminou — próxima: Z" removido: a bossbar já mostra a
+                // fase e o tempo em permanência, este texto era só ruído no chat.
 
                 saveState();
                 startPauseCountdown(pauseSeconds, shrinkSeconds);
@@ -436,11 +436,8 @@ public class BorderManager implements Listener {
                     pauseTask.cancel();
                     paused = false;
                     saveState();
-                    if (currentStageIndex < stages.size() - 1) {
-                        broadcastFormatted(plugin.getConfig().getString("mensagens.borda_retomada"),
-                                currentStageIndex + 1, stages.size(),
-                                stages.get(currentStageIndex + 1), shrinkSeconds);
-                    }
+                    // Aviso "A borda X/Y foi retomada" removido pela mesma razão do
+                    // "terminou": a bossbar já dá essa informação de forma contínua.
                     scheduleNextShrink();
                     return;
                 }
